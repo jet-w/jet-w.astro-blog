@@ -1,0 +1,210 @@
+---
+import { getCollection } from 'astro:content';
+import PageLayout from '@jet-w/astro-blog/layouts/PageLayout.astro';
+
+// 获取所有非草稿文章
+const allPosts = await getCollection('posts', ({ data }) => !data.draft);
+
+// 按年月分组文章
+interface ArchiveMonth {
+  month: number;
+  monthName: string;
+  count: number;
+  posts: Array<{
+    id: string;
+    title: string;
+    pubDate: Date;
+  }>;
+}
+
+interface ArchiveYear {
+  year: number;
+  months: ArchiveMonth[];
+  totalCount: number;
+}
+
+const archiveData = new Map<number, Map<number, ArchiveMonth>>();
+
+// 月份名称
+const monthNames = ['一月', '二月', '三月', '四月', '五月', '六月', '七月', '八月', '九月', '十月', '十一月', '十二月'];
+
+allPosts.forEach(post => {
+  // pubDate 现在通过 schema transform 统一包含 date 或 pubDate 的值
+  if (post.data.pubDate) {
+    const date = new Date(post.data.pubDate);
+    const year = date.getFullYear();
+    const month = date.getMonth() + 1;
+
+    if (!archiveData.has(year)) {
+      archiveData.set(year, new Map());
+    }
+
+    const yearData = archiveData.get(year)!;
+
+    if (!yearData.has(month)) {
+      yearData.set(month, {
+        month,
+        monthName: monthNames[month - 1],
+        count: 0,
+        posts: []
+      });
+    }
+
+    const monthData = yearData.get(month)!;
+    monthData.count++;
+    monthData.posts.push({
+      id: post.id,
+      title: post.data.title,
+      pubDate: date
+    });
+  }
+});
+
+// 转换为数组并排序
+const archives: ArchiveYear[] = Array.from(archiveData.entries())
+  .sort((a, b) => b[0] - a[0])
+  .map(([year, monthsMap]) => {
+    const months = Array.from(monthsMap.values())
+      .sort((a, b) => b.month - a.month)
+      .map(m => ({
+        ...m,
+        posts: m.posts.sort((a, b) => b.pubDate.getTime() - a.pubDate.getTime())
+      }));
+
+    return {
+      year,
+      months,
+      totalCount: months.reduce((sum, m) => sum + m.count, 0)
+    };
+  });
+
+const totalPosts = archives.reduce((sum, y) => sum + y.totalCount, 0);
+---
+
+<PageLayout
+  title="文章归档"
+  description="按时间归档的所有文章"
+  showSidebar={true}
+>
+  <!-- 面包屑导航 -->
+  <nav class="flex items-center space-x-2 text-sm text-slate-600 dark:text-slate-400 mb-8">
+    <a href="/" class="hover:text-primary-500 transition-colors">首页</a>
+    <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+      <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7" />
+    </svg>
+    <span class="text-slate-900 dark:text-slate-100">归档</span>
+  </nav>
+
+  <!-- 页面头部 -->
+  <div class="text-center mb-12">
+    <div class="inline-flex items-center justify-center w-16 h-16 bg-primary-100 dark:bg-primary-900/30 rounded-full mb-4">
+      <svg class="w-8 h-8 text-primary-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
+      </svg>
+    </div>
+
+    <h1 class="text-4xl font-bold text-slate-900 dark:text-slate-100 mb-4">
+      文章归档
+    </h1>
+
+    <p class="text-xl text-slate-600 dark:text-slate-400">
+      共 {totalPosts} 篇文章，跨越 {archives.length} 年
+    </p>
+  </div>
+
+  <!-- 归档时间线 -->
+  <div class="relative">
+    <!-- 时间线 -->
+    <div class="absolute left-4 md:left-8 top-0 bottom-0 w-0.5 bg-slate-200 dark:bg-slate-700"></div>
+
+    {archives.map((yearData) => (
+      <div class="mb-12">
+        <!-- 年份标题 -->
+        <div class="relative flex items-center mb-6">
+          <div class="absolute left-4 md:left-8 w-4 h-4 -ml-2 bg-primary-500 rounded-full border-4 border-white dark:border-slate-900 z-10"></div>
+          <h2 class="ml-12 md:ml-16 text-2xl font-bold text-slate-900 dark:text-slate-100 flex items-center gap-3">
+            {yearData.year}年
+            <span class="text-sm font-normal text-slate-500 dark:text-slate-400 bg-slate-100 dark:bg-slate-800 px-3 py-1 rounded-full">
+              {yearData.totalCount} 篇
+            </span>
+          </h2>
+        </div>
+
+        <!-- 月份列表 -->
+        <div class="ml-12 md:ml-16 space-y-6">
+          {yearData.months.map((monthData) => (
+            <div class="relative">
+              <!-- 月份节点 -->
+              <div class="absolute -left-8 md:-left-8 w-2 h-2 mt-2 bg-slate-400 dark:bg-slate-500 rounded-full"></div>
+
+              <div class="bg-white dark:bg-slate-800 rounded-lg border border-slate-200 dark:border-slate-700 overflow-hidden">
+                <!-- 月份标题 -->
+                <a
+                  href={`/archives/${yearData.year}/${String(monthData.month).padStart(2, '0')}`}
+                  class="flex items-center justify-between p-4 bg-slate-50 dark:bg-slate-800/50 hover:bg-slate-100 dark:hover:bg-slate-700/50 transition-colors"
+                >
+                  <span class="font-semibold text-slate-900 dark:text-slate-100">
+                    {monthData.monthName}
+                  </span>
+                  <span class="text-sm text-slate-500 dark:text-slate-400 bg-white dark:bg-slate-700 px-2 py-1 rounded">
+                    {monthData.count} 篇
+                  </span>
+                </a>
+
+                <!-- 文章列表预览 -->
+                <div class="divide-y divide-slate-100 dark:divide-slate-700">
+                  {monthData.posts.slice(0, 5).map((post) => (
+                    <a
+                      href={`/posts/${post.id.toLowerCase()}`}
+                      class="flex items-center justify-between p-4 hover:bg-slate-50 dark:hover:bg-slate-700/30 transition-colors"
+                    >
+                      <span class="text-slate-700 dark:text-slate-300 hover:text-primary-500 transition-colors line-clamp-1">
+                        {post.title}
+                      </span>
+                      <time class="text-xs text-slate-500 dark:text-slate-400 ml-4 flex-shrink-0">
+                        {post.pubDate.getDate()}日
+                      </time>
+                    </a>
+                  ))}
+                  {monthData.posts.length > 5 && (
+                    <a
+                      href={`/archives/${yearData.year}/${String(monthData.month).padStart(2, '0')}`}
+                      class="block p-4 text-center text-sm text-primary-500 hover:bg-slate-50 dark:hover:bg-slate-700/30 transition-colors"
+                    >
+                      查看全部 {monthData.count} 篇文章 →
+                    </a>
+                  )}
+                </div>
+              </div>
+            </div>
+          ))}
+        </div>
+      </div>
+    ))}
+  </div>
+
+  <!-- 空状态 -->
+  {archives.length === 0 && (
+    <div class="text-center py-16">
+      <div class="text-6xl mb-4">📅</div>
+      <h3 class="text-xl font-semibold text-slate-900 dark:text-slate-100 mb-2">
+        暂无文章
+      </h3>
+      <p class="text-slate-600 dark:text-slate-400 mb-6">
+        还没有发布任何文章
+      </p>
+      <a href="/" class="btn-primary">
+        返回首页
+      </a>
+    </div>
+  )}
+</PageLayout>
+
+<style>
+  .line-clamp-1 {
+    display: -webkit-box;
+    -webkit-line-clamp: 1;
+    -webkit-box-orient: vertical;
+    overflow: hidden;
+  }
+</style>

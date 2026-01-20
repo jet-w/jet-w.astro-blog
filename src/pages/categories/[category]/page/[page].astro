@@ -1,0 +1,218 @@
+---
+import { getCollection } from 'astro:content';
+import PageLayout from '@jet-w/astro-blog/layouts/PageLayout.astro';
+import PostCard from '@jet-w/astro-blog/components/blog/PostCard.astro';
+import Pagination from '@jet-w/astro-blog/components/ui/Pagination.astro';
+
+export async function getStaticPaths() {
+  const postsPerPage = 10;
+  const allPosts = await getCollection('posts', ({ data }) => !data.draft);
+
+  // 从所有文章中收集分类
+  const categoryMap = new Map<string, { name: string; posts: typeof allPosts }>();
+
+  allPosts.forEach(post => {
+    (post.data.categories || []).forEach(category => {
+      const slug = category.toLowerCase().replace(/\s+/g, '-');
+      if (categoryMap.has(slug)) {
+        categoryMap.get(slug)!.posts.push(post);
+      } else {
+        categoryMap.set(slug, { name: category, posts: [post] });
+      }
+    });
+  });
+
+  // 为每个分类的每一页生成路径
+  const paths: Array<{
+    params: { category: string; page: string };
+    props: { categorySlug: string; categoryName: string; page: number; totalPages: number };
+  }> = [];
+
+  categoryMap.forEach(({ name, posts }, slug) => {
+    // 按日期排序
+    const sortedPosts = posts.sort((a, b) => {
+      const dateA = a.data.pubDate ? new Date(a.data.pubDate).getTime() : 0;
+      const dateB = b.data.pubDate ? new Date(b.data.pubDate).getTime() : 0;
+      return dateB - dateA;
+    });
+
+    const totalPages = Math.ceil(sortedPosts.length / postsPerPage);
+
+    // 为每一页生成路径（从第2页开始，第1页由 [category].astro 处理）
+    for (let page = 2; page <= totalPages; page++) {
+      paths.push({
+        params: { category: slug, page: page.toString() },
+        props: { categorySlug: slug, categoryName: name, page, totalPages }
+      });
+    }
+  });
+
+  return paths;
+}
+
+const { categorySlug, categoryName, page: currentPage, totalPages } = Astro.props;
+const postsPerPage = 10;
+
+// 获取所有文章并筛选包含该分类的文章
+const allPosts = await getCollection('posts', ({ data }) => !data.draft);
+
+// 筛选包含该分类的文章
+const filteredPosts = allPosts
+  .filter(post =>
+    (post.data.categories || []).some(c => c.toLowerCase().replace(/\s+/g, '-') === categorySlug)
+  )
+  .sort((a, b) => {
+    const dateA = a.data.pubDate ? new Date(a.data.pubDate).getTime() : 0;
+    const dateB = b.data.pubDate ? new Date(b.data.pubDate).getTime() : 0;
+    return dateB - dateA;
+  });
+
+// 分页逻辑
+const totalPosts = filteredPosts.length;
+const startIndex = (currentPage - 1) * postsPerPage;
+const endIndex = startIndex + postsPerPage;
+const posts = filteredPosts.slice(startIndex, endIndex);
+
+// 获取相关分类（同一篇文章中出现的其他分类）
+const relatedCategoryMap = new Map<string, { name: string; count: number }>();
+filteredPosts.forEach(post => {
+  (post.data.categories || []).forEach(cat => {
+    const slug = cat.toLowerCase().replace(/\s+/g, '-');
+    if (slug !== categorySlug) {
+      if (relatedCategoryMap.has(slug)) {
+        relatedCategoryMap.get(slug)!.count++;
+      } else {
+        relatedCategoryMap.set(slug, { name: cat, count: 1 });
+      }
+    }
+  });
+});
+
+const relatedCategories = Array.from(relatedCategoryMap.entries())
+  .sort((a, b) => b[1].count - a[1].count)
+  .slice(0, 3)
+  .map(([slug, { name, count }]) => ({ slug, name, count }));
+---
+
+<PageLayout
+  title={`分类: ${categoryName} - 第 ${currentPage} 页`}
+  description={`浏览所有 ${categoryName} 相关的文章 - 第 ${currentPage} 页`}
+  showSidebar={true}
+>
+  <!-- 面包屑导航 -->
+  <nav class="flex items-center space-x-2 text-sm text-slate-600 dark:text-slate-400 mb-8">
+    <a href="/" class="hover:text-primary-500 transition-colors">首页</a>
+    <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+      <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7" />
+    </svg>
+    <a href="/categories" class="hover:text-primary-500 transition-colors">分类</a>
+    <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+      <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7" />
+    </svg>
+    <a href={`/categories/${categorySlug}`} class="hover:text-primary-500 transition-colors">{categoryName}</a>
+    <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+      <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7" />
+    </svg>
+    <span class="text-slate-900 dark:text-slate-100">第 {currentPage} 页</span>
+  </nav>
+
+  <!-- 页面头部 -->
+  <div class="text-center mb-12">
+    <div class="inline-flex items-center justify-center w-20 h-20 bg-amber-100 dark:bg-amber-900/30 rounded-full mb-6">
+      <svg class="w-10 h-10 text-amber-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 11H5m14 0a2 2 0 012 2v6a2 2 0 01-2 2H5a2 2 0 01-2-2v-6a2 2 0 012-2m14 0V9a2 2 0 00-2-2M5 11V9a2 2 0 012-2m0 0V5a2 2 0 012-2h6a2 2 0 012 2v2M7 7h10" />
+      </svg>
+    </div>
+
+    <h1 class="text-4xl font-bold text-slate-900 dark:text-slate-100 mb-4">
+      {categoryName}
+    </h1>
+
+    <p class="text-xl text-slate-600 dark:text-slate-400 mb-8 max-w-2xl mx-auto">
+      浏览 {categoryName} 分类下的所有文章
+    </p>
+
+    <!-- 分类统计 -->
+    <div class="inline-flex items-center space-x-6 text-sm text-slate-500 dark:text-slate-400 bg-slate-50 dark:bg-slate-800 px-6 py-3 rounded-lg">
+      <span>{categoryName}</span>
+      <span>•</span>
+      <span>{totalPosts} 篇文章</span>
+      <span>•</span>
+      <span>第 {currentPage} / {totalPages} 页</span>
+    </div>
+  </div>
+
+  <!-- 文章列表 -->
+  {posts.length > 0 ? (
+    <div class="space-y-8 mb-12">
+      {posts.map((post) => (
+        <PostCard
+          post={{
+            slug: post.id.toLowerCase(),
+            title: post.data.title,
+            description: post.data.description,
+            pubDate: post.data.pubDate,
+            tags: post.data.tags,
+            categories: post.data.categories,
+            author: post.data.author,
+            image: post.data.image
+          }}
+          layout="horizontal"
+        />
+      ))}
+    </div>
+  ) : (
+    <div class="text-center py-16">
+      <div class="text-6xl mb-4">📂</div>
+      <h3 class="text-xl font-semibold text-slate-900 dark:text-slate-100 mb-2">
+        暂无相关文章
+      </h3>
+      <p class="text-slate-600 dark:text-slate-400 mb-6">
+        目前还没有 {categoryName} 分类的文章，请查看其他分类。
+      </p>
+      <a href="/categories" class="btn-secondary">
+        浏览所有分类
+      </a>
+    </div>
+  )}
+
+  <!-- 分页导航 -->
+  {totalPages > 1 && (
+    <Pagination
+      currentPage={currentPage}
+      totalPages={totalPages}
+      baseUrl={`/categories/${categorySlug}`}
+    />
+  )}
+
+  <!-- 相关分类 -->
+  {relatedCategories.length > 0 && (
+    <section class="mt-16 pt-8 border-t border-slate-200 dark:border-slate-700">
+      <h2 class="text-2xl font-bold text-slate-900 dark:text-slate-100 mb-6">
+        相关分类
+      </h2>
+      <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
+        {relatedCategories.map((relatedCategory) => (
+          <a
+            href={`/categories/${relatedCategory.slug}`}
+            class="group card hover:shadow-lg transform hover:-translate-y-1 transition-all duration-300"
+          >
+            <div class="flex items-center justify-between">
+              <div>
+                <h3 class="font-semibold text-slate-900 dark:text-slate-100 group-hover:text-amber-500 transition-colors">
+                  {relatedCategory.name}
+                </h3>
+                <p class="text-sm text-slate-600 dark:text-slate-400">
+                  {relatedCategory.count} 篇文章
+                </p>
+              </div>
+              <svg class="w-5 h-5 text-slate-400 group-hover:text-amber-500 transition-colors" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7" />
+              </svg>
+            </div>
+          </a>
+        ))}
+      </div>
+    </section>
+  )}
+</PageLayout>

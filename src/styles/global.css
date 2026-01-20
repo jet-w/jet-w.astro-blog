@@ -1,0 +1,874 @@
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=JetBrains+Mono:wght@400;500;600&display=swap');
+
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  html {
+    font-family: 'Inter', 'Noto Sans SC', 'PingFang SC', 'Microsoft YaHei', system-ui, sans-serif;
+    scroll-behavior: smooth;
+  }
+
+  html, body {
+    @apply w-full min-w-0;
+  }
+
+  body {
+    @apply bg-white dark:bg-slate-900 text-slate-900 dark:text-slate-100 transition-colors duration-300 overflow-x-hidden;
+  }
+
+  /* 提高深色模式下普通文字的对比度 */
+  .dark {
+    --tw-prose-body: theme('colors.slate.300');
+    --tw-prose-headings: theme('colors.slate.100');
+    --tw-prose-bold: theme('colors.slate.200');
+    --tw-prose-counters: theme('colors.slate.400');
+    --tw-prose-bullets: theme('colors.slate.400');
+  }
+
+  /* 自定义滚动条 */
+  ::-webkit-scrollbar {
+    width: 6px;
+    height: 6px;
+  }
+
+  ::-webkit-scrollbar-track {
+    @apply bg-slate-100 dark:bg-slate-800;
+  }
+
+  ::-webkit-scrollbar-thumb {
+    @apply bg-slate-300 dark:bg-slate-600 rounded-full;
+  }
+
+  ::-webkit-scrollbar-thumb:hover {
+    @apply bg-slate-400 dark:bg-slate-500;
+  }
+}
+
+@layer components {
+  /* 自定义按钮样式 */
+  .btn-primary {
+    @apply bg-primary-500 hover:bg-primary-600 text-white px-4 py-2 rounded-lg transition-colors duration-200 font-medium;
+  }
+
+  .btn-secondary {
+    @apply border border-primary-500 text-primary-500 hover:bg-primary-50 dark:hover:bg-primary-900/20 px-4 py-2 rounded-lg transition-colors duration-200 font-medium;
+  }
+
+  .btn-ghost {
+    @apply text-primary-500 hover:bg-primary-50 dark:hover:bg-primary-900/20 px-4 py-2 rounded-lg transition-colors duration-200 font-medium;
+  }
+
+  /* 卡片样式 */
+  .card {
+    @apply bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl p-6 shadow-sm hover:shadow-md transition-shadow duration-200;
+  }
+
+  /* 输入框样式 */
+  .input {
+    @apply w-full px-4 py-3 border border-slate-300 dark:border-slate-600 rounded-lg bg-white dark:bg-slate-800 text-slate-900 dark:text-slate-100 placeholder-slate-500 dark:placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-primary-500 focus:border-transparent transition-colors duration-200;
+  }
+
+  /* 链接样式 */
+  .link {
+    @apply text-primary-500 hover:text-primary-600 dark:hover:text-primary-400 transition-colors duration-200;
+  }
+
+  /* 文章内容样式 */
+  .prose-custom {
+    @apply prose prose-slate dark:prose-invert max-w-none;
+  }
+
+  /* 深色模式下提高正文对比度 - 适用于所有 prose */
+  .dark .prose,
+  .dark .prose-custom {
+    --tw-prose-body: theme('colors.slate.200');
+    --tw-prose-headings: theme('colors.white');
+    --tw-prose-lead: theme('colors.slate.300');
+    --tw-prose-bold: theme('colors.white');
+    --tw-prose-links: theme('colors.primary.400');
+    --tw-prose-counters: theme('colors.slate.300');
+    --tw-prose-bullets: theme('colors.slate.300');
+    --tw-prose-hr: theme('colors.slate.600');
+    --tw-prose-quotes: theme('colors.slate.200');
+    --tw-prose-quote-borders: theme('colors.slate.600');
+    --tw-prose-captions: theme('colors.slate.300');
+    --tw-prose-code: theme('colors.slate.100');
+    --tw-prose-pre-code: theme('colors.slate.200');
+    --tw-prose-pre-bg: theme('colors.slate.900');
+    --tw-prose-th-borders: theme('colors.slate.600');
+    --tw-prose-td-borders: theme('colors.slate.700');
+  }
+
+  .prose-custom h1,
+  .prose-custom h2,
+  .prose-custom h3,
+  .prose-custom h4,
+  .prose-custom h5,
+  .prose-custom h6,
+  .dark .prose h1,
+  .dark .prose h2,
+  .dark .prose h3,
+  .dark .prose h4,
+  .dark .prose h5,
+  .dark .prose h6 {
+    @apply font-semibold text-slate-900 dark:text-white;
+  }
+
+  .prose-custom p,
+  .prose-custom li {
+    @apply text-slate-700 dark:text-slate-200;
+  }
+
+  .prose-custom a,
+  .dark .prose a {
+    @apply text-primary-500 hover:text-primary-600 dark:text-primary-400 dark:hover:text-primary-300 no-underline border-b border-primary-200 hover:border-primary-400 transition-colors duration-200;
+  }
+
+  .prose-custom code,
+  .dark .prose code {
+    @apply bg-slate-100 dark:bg-slate-800 text-slate-900 dark:text-slate-200 px-1.5 py-0.5 rounded text-sm font-mono;
+  }
+
+  /* 移除 Tailwind Typography 默认添加的反引号 */
+  .prose code::before,
+  .prose code::after,
+  .prose-custom code::before,
+  .prose-custom code::after {
+    content: none;
+  }
+
+  .prose-custom pre,
+  .dark .prose pre {
+    @apply bg-slate-900 dark:bg-slate-950 rounded-lg overflow-x-auto;
+  }
+
+  .prose-custom pre code,
+  .dark .prose pre code {
+    @apply bg-transparent text-slate-100 p-0;
+  }
+
+  .prose-custom blockquote,
+  .dark .prose blockquote {
+    @apply border-l-4 border-primary-200 dark:border-primary-600 bg-primary-50 dark:bg-primary-900/30 pl-4 py-2 rounded-r-lg;
+  }
+
+  .prose-custom blockquote p,
+  .dark .prose blockquote p {
+    @apply text-slate-600 dark:text-slate-300;
+  }
+
+  .prose-custom strong,
+  .dark .prose strong {
+    @apply text-slate-900 dark:text-white;
+  }
+
+  /* 容器样式 */
+  .custom-container {
+    @apply my-6 border-l-4 rounded-lg shadow-sm overflow-hidden;
+  }
+
+  .container-title {
+    @apply px-4 py-2 font-semibold text-sm flex items-center;
+  }
+
+  .container-content {
+    @apply px-4 py-3;
+  }
+
+  /* tip 容器 */
+  .container-tip {
+    @apply border-blue-400 bg-blue-50 dark:bg-blue-900/20;
+  }
+
+  .container-tip .container-title {
+    @apply text-blue-800 dark:text-blue-200 bg-blue-100 dark:bg-blue-800/30;
+  }
+
+  .container-tip .container-content {
+    @apply text-blue-700 dark:text-blue-300;
+  }
+
+  /* note 容器 */
+  .container-note {
+    @apply border-gray-400 bg-gray-50 dark:bg-gray-800/30;
+  }
+
+  .container-note .container-title {
+    @apply text-gray-800 dark:text-gray-200 bg-gray-100 dark:bg-gray-700/50;
+  }
+
+  .container-note .container-content {
+    @apply text-gray-700 dark:text-gray-300;
+  }
+
+  /* warning 容器 */
+  .container-warning {
+    @apply border-yellow-400 bg-yellow-50 dark:bg-yellow-900/20;
+  }
+
+  .container-warning .container-title {
+    @apply text-yellow-800 dark:text-yellow-200 bg-yellow-100 dark:bg-yellow-800/30;
+  }
+
+  .container-warning .container-content {
+    @apply text-yellow-700 dark:text-yellow-300;
+  }
+
+  /* danger 容器 */
+  .container-danger {
+    @apply border-red-400 bg-red-50 dark:bg-red-900/20;
+  }
+
+  .container-danger .container-title {
+    @apply text-red-800 dark:text-red-200 bg-red-100 dark:bg-red-800/30;
+  }
+
+  .container-danger .container-content {
+    @apply text-red-700 dark:text-red-300;
+  }
+
+  /* info 容器 */
+  .container-info {
+    @apply border-cyan-400 bg-cyan-50 dark:bg-cyan-900/20;
+  }
+
+  .container-info .container-title {
+    @apply text-cyan-800 dark:text-cyan-200 bg-cyan-100 dark:bg-cyan-800/30;
+  }
+
+  .container-info .container-content {
+    @apply text-cyan-700 dark:text-cyan-300;
+  }
+
+  /* details 容器 */
+  .container-details {
+    @apply border-purple-400 bg-purple-50 dark:bg-purple-900/20;
+  }
+
+  .container-details .container-title {
+    @apply text-purple-800 dark:text-purple-200 bg-purple-100 dark:bg-purple-800/30;
+  }
+
+  .container-details .container-content {
+    @apply text-purple-700 dark:text-purple-300;
+  }
+
+  /* 容器内的段落样式 */
+  .custom-container .container-content p {
+    @apply mb-3 last:mb-0;
+  }
+
+  .custom-container .container-content ul,
+  .custom-container .container-content ol {
+    @apply mb-3 last:mb-0;
+  }
+
+  .custom-container .container-content li {
+    @apply mb-1 last:mb-0;
+  }
+}
+
+/* 暗色模式过渡动画 */
+* {
+  transition-property: background-color, border-color, color, fill, stroke;
+  transition-timing-function: cubic-bezier(0.4, 0, 0.2, 1);
+  transition-duration: 150ms;
+}
+
+/* 代码高亮主题 */
+.astro-code {
+  @apply rounded-lg !important;
+}
+
+/* 代码块增强样式 */
+.code-block-wrapper {
+  @apply relative my-4 rounded-lg overflow-hidden border border-slate-700 dark:border-slate-600;
+}
+
+.code-block-header {
+  @apply flex items-center justify-between px-4 py-2 bg-slate-800 dark:bg-slate-900 border-b border-slate-700 dark:border-slate-600;
+}
+
+.code-block-lang {
+  @apply text-xs font-mono text-slate-400 dark:text-slate-500 uppercase tracking-wide;
+}
+
+.code-block-actions {
+  @apply flex items-center gap-2;
+}
+
+.code-block-btn {
+  @apply flex items-center gap-1 px-2 py-1 text-xs text-slate-400 hover:text-slate-200 bg-slate-700/50 hover:bg-slate-700 rounded transition-colors duration-200;
+}
+
+.code-block-btn svg {
+  @apply w-4 h-4;
+}
+
+.code-block-btn.copied {
+  @apply text-green-400;
+}
+
+.code-block-content {
+  @apply relative;
+}
+
+.code-block-content pre {
+  @apply !my-0 !rounded-none !border-0;
+}
+
+/* 代码块收缩状态 */
+.code-block-wrapper.collapsed .code-block-content {
+  @apply max-h-24 overflow-hidden;
+}
+
+.code-block-wrapper.collapsed .code-block-content::after {
+  content: '';
+  @apply absolute bottom-0 left-0 right-0 h-12 bg-gradient-to-t from-slate-900 to-transparent pointer-events-none;
+}
+
+.code-block-wrapper.collapsed .collapse-btn .collapse-icon {
+  @apply rotate-180;
+}
+
+/* 展开按钮 */
+.code-block-expand {
+  @apply absolute bottom-2 left-1/2 -translate-x-1/2 z-10;
+}
+
+.code-block-wrapper:not(.collapsed) .code-block-expand {
+  @apply hidden;
+}
+
+.expand-btn {
+  @apply flex items-center gap-1 px-3 py-1 text-xs text-slate-300 bg-slate-800/90 hover:bg-slate-700 rounded-full border border-slate-600 transition-colors duration-200;
+}
+
+/* 底部收起按钮 */
+.code-block-collapse {
+  @apply flex justify-center py-2 border-t border-slate-700/50 bg-gradient-to-t from-slate-900 to-transparent;
+}
+
+.code-block-wrapper.collapsed .code-block-collapse {
+  @apply hidden;
+}
+
+.collapse-bottom-btn {
+  @apply flex items-center gap-1 px-3 py-1 text-xs text-slate-300 bg-slate-800/90 hover:bg-slate-700 rounded-full border border-slate-600 transition-colors duration-200 cursor-pointer;
+}
+
+/* 加载动画 */
+.loading {
+  @apply animate-pulse;
+}
+
+/* 回到顶部按钮 */
+.back-to-top {
+  @apply fixed bottom-8 right-8 bg-primary-500 hover:bg-primary-600 text-white w-12 h-12 rounded-full flex items-center justify-center shadow-lg transition-all duration-300 opacity-0 invisible;
+}
+
+.back-to-top.show {
+  @apply opacity-100 visible;
+}
+
+/* 移动端适配 */
+@media (max-width: 640px) {
+  .back-to-top {
+    @apply bottom-6 right-6 w-10 h-10;
+  }
+}
+
+/* 侧边栏折叠样式 - 超高特异性 */
+html body.sidebar-collapsed aside[data-sidebar] {
+  transform: translateX(-100%) !important;
+  opacity: 0 !important;
+  pointer-events: none !important;
+  transition: transform 0.3s ease-in-out, opacity 0.3s ease-in-out !important;
+  margin-left: -256px !important; /* -w-64 fallback */
+}
+
+/* 主内容区在侧边栏折叠时的样式调整 */
+html body.sidebar-collapsed div[data-main-content] {
+  padding-left: 0 !important;
+  padding-right: 0 !important;
+  transition: padding-left 0.3s ease-in-out, padding-right 0.3s ease-in-out !important;
+}
+
+/* 侧边栏切换按钮位置调整 */
+html body.sidebar-collapsed div[data-sidebar-toggle] {
+  left: 0.25rem !important; /* 侧边栏隐藏时按钮贴近左边 */
+}
+
+html body:not(.sidebar-collapsed) div[data-sidebar-toggle] {
+  left: 16.25rem !important; /* 侧边栏显示时按钮在侧边栏右侧 (w-64 + 0.25rem) */
+}
+
+/* 平滑过渡动画 */
+aside[data-sidebar] {
+  transform: translateX(0);
+  opacity: 1;
+  transition: transform 0.3s ease-in-out, opacity 0.3s ease-in-out;
+}
+
+div[data-main-content] {
+  transition: padding-left 0.3s ease-in-out, padding-right 0.3s ease-in-out;
+}
+
+div[data-sidebar-toggle] {
+  transition: left 0.3s ease-in-out;
+}
+
+/* 确保在小屏设备上侧边栏保持显示 */
+@media (max-width: 1023px) {
+  html body.sidebar-collapsed aside[data-sidebar] {
+    transform: translateX(0) !important;
+    opacity: 1 !important;
+    pointer-events: auto !important;
+    margin-left: 0 !important;
+  }
+
+  /* 小屏设备上隐藏切换按钮 */
+  div[data-sidebar-toggle] {
+    display: none !important;
+  }
+}
+
+/* ========== Mermaid 全屏预览样式 ========== */
+
+/* 全屏按钮 */
+.mermaid-fullscreen-btn {
+  position: absolute;
+  top: 0.5rem;
+  right: 0.5rem;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 36px;
+  height: 36px;
+  background: rgba(255, 255, 255, 0.9);
+  border: 1px solid #e2e8f0;
+  border-radius: 0.5rem;
+  cursor: pointer;
+  color: #64748b;
+  transition: all 0.2s ease;
+  z-index: 10;
+  opacity: 0;
+}
+
+.mermaid-rendered:hover .mermaid-fullscreen-btn {
+  opacity: 1;
+}
+
+.mermaid-fullscreen-btn:hover {
+  background: #f1f5f9;
+  color: #3b82f6;
+  border-color: #3b82f6;
+}
+
+/* 深色模式按钮 */
+.dark .mermaid-fullscreen-btn {
+  background: rgba(30, 41, 59, 0.9);
+  border-color: #475569;
+  color: #94a3b8;
+}
+
+.dark .mermaid-fullscreen-btn:hover {
+  background: #334155;
+  color: #60a5fa;
+  border-color: #60a5fa;
+}
+
+/* 全屏模态框 */
+.mermaid-fullscreen-modal {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100vw;
+  height: 100vh;
+  z-index: 9999;
+  display: none;
+}
+
+.mermaid-fullscreen-modal.active {
+  display: block;
+}
+
+/* 背景遮罩 */
+.mermaid-fullscreen-backdrop {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  background: rgba(0, 0, 0, 0.85);
+  backdrop-filter: blur(4px);
+}
+
+/* 内容容器 */
+.mermaid-fullscreen-container {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  width: 100%;
+  height: 100%;
+  z-index: 1;
+}
+
+/* 头部控制栏 */
+.mermaid-fullscreen-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 1rem 1.5rem;
+  background: rgba(15, 23, 42, 0.95);
+  border-bottom: 1px solid #334155;
+}
+
+.mermaid-fullscreen-title {
+  font-size: 1rem;
+  font-weight: 500;
+  color: #e2e8f0;
+}
+
+.mermaid-fullscreen-controls {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+/* 缩放按钮 */
+.mermaid-zoom-btn {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 36px;
+  height: 36px;
+  background: #334155;
+  border: 1px solid #475569;
+  border-radius: 0.375rem;
+  cursor: pointer;
+  color: #cbd5e1;
+  transition: all 0.2s ease;
+}
+
+.mermaid-zoom-btn:hover {
+  background: #475569;
+  color: #f1f5f9;
+  border-color: #64748b;
+}
+
+/* 缩放级别显示 */
+.mermaid-zoom-level {
+  min-width: 50px;
+  text-align: center;
+  font-size: 0.875rem;
+  font-weight: 500;
+  color: #94a3b8;
+  padding: 0 0.5rem;
+}
+
+/* 关闭按钮 */
+.mermaid-close-btn {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 40px;
+  height: 40px;
+  background: transparent;
+  border: none;
+  border-radius: 0.375rem;
+  cursor: pointer;
+  color: #94a3b8;
+  margin-left: 0.5rem;
+  transition: all 0.2s ease;
+}
+
+.mermaid-close-btn:hover {
+  background: #ef4444;
+  color: white;
+}
+
+/* 内容区域 */
+.mermaid-fullscreen-content {
+  flex: 1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  overflow: auto;
+  padding: 2rem;
+}
+
+/* SVG 包装器 */
+.mermaid-fullscreen-svg-wrapper {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transform-origin: center center;
+  padding: 2rem;
+  background: white;
+  border-radius: 0.75rem;
+  box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.25);
+  cursor: grab;
+  user-select: none;
+}
+
+.mermaid-fullscreen-svg-wrapper:active {
+  cursor: grabbing;
+}
+
+.mermaid-fullscreen-svg-wrapper svg {
+  max-width: none;
+  height: auto;
+  pointer-events: none;
+}
+
+/* 深色模式 SVG 容器 */
+.dark .mermaid-fullscreen-svg-wrapper {
+  background: #1e293b;
+}
+
+/* 响应式适配 */
+@media (max-width: 640px) {
+  .mermaid-fullscreen-header {
+    padding: 0.75rem 1rem;
+  }
+
+  .mermaid-fullscreen-title {
+    font-size: 0.875rem;
+  }
+
+  .mermaid-zoom-btn {
+    width: 32px;
+    height: 32px;
+  }
+
+  .mermaid-close-btn {
+    width: 36px;
+    height: 36px;
+  }
+
+  .mermaid-fullscreen-content {
+    padding: 1rem;
+  }
+
+  .mermaid-fullscreen-svg-wrapper {
+    padding: 1rem;
+  }
+}
+
+/* ========== 深色模式文字对比度增强 ========== */
+/* 放在文件末尾，确保优先级最高 */
+
+/* prose 内容在深色模式下的对比度增强 */
+.dark .prose p,
+.dark .prose li,
+.dark .prose-invert p,
+.dark .prose-invert li {
+  color: #e2e8f0 !important; /* slate-200 */
+}
+
+/* prose-invert 的 CSS 变量覆盖 */
+.dark .prose-invert {
+  --tw-prose-body: #e2e8f0; /* slate-200 */
+  --tw-prose-headings: #ffffff;
+  --tw-prose-lead: #cbd5e1; /* slate-300 */
+  --tw-prose-bold: #ffffff;
+  --tw-prose-counters: #cbd5e1;
+  --tw-prose-bullets: #cbd5e1;
+}
+
+/* 表格在深色模式下的对比度增强 */
+.dark .prose table,
+.dark .prose-invert table {
+  @apply border-slate-600;
+}
+
+.dark .prose th,
+.dark .prose-invert th {
+  @apply text-slate-100 bg-slate-700 border-slate-600;
+}
+
+.dark .prose td,
+.dark .prose-invert td {
+  @apply text-slate-200 border-slate-600;
+}
+
+.dark .prose tr,
+.dark .prose-invert tr {
+  @apply border-slate-600;
+}
+
+.dark .prose tbody tr:nth-child(even),
+.dark .prose-invert tbody tr:nth-child(even) {
+  @apply bg-slate-800/50;
+}
+
+.dark .prose tbody tr:hover,
+.dark .prose-invert tbody tr:hover {
+  @apply bg-slate-700/50;
+}
+
+/* ========== 视频嵌入样式 ========== */
+
+/* 视频容器基础样式 */
+.video-container {
+  @apply relative w-full my-6 rounded-lg overflow-hidden bg-black shadow-lg;
+}
+
+.video-container iframe,
+.video-container video {
+  @apply absolute top-0 left-0 w-full h-full;
+}
+
+/* 平台标识 */
+.video-platform-badge {
+  @apply absolute top-3 left-3 flex items-center gap-1.5 px-2.5 py-1 rounded-md text-xs font-medium z-10 opacity-0 transition-opacity duration-200;
+  background: rgba(0, 0, 0, 0.7);
+  backdrop-filter: blur(4px);
+}
+
+.video-container:hover .video-platform-badge {
+  @apply opacity-100;
+}
+
+.video-platform-badge svg {
+  @apply w-4 h-4;
+}
+
+/* YouTube 样式 */
+.youtube-video .video-platform-badge {
+  @apply text-red-400;
+}
+
+/* Bilibili 样式 */
+.bilibili-video .video-platform-badge {
+  @apply text-pink-400;
+}
+
+/* 自托管视频样式 */
+.self-hosted-video .video-platform-badge {
+  @apply text-blue-400;
+}
+
+/* 视频错误提示 */
+.video-error {
+  @apply my-6 p-6 bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 rounded-lg text-center;
+}
+
+.video-error p {
+  @apply text-red-600 dark:text-red-400 m-0;
+}
+
+/* 视频回退文字 */
+.video-fallback {
+  @apply text-white text-center p-4;
+}
+
+.video-fallback a {
+  @apply text-blue-400 hover:text-blue-300 underline;
+}
+
+/* 响应式视频网格 */
+.video-grid {
+  @apply grid gap-6 my-6;
+  grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+}
+
+.video-grid .video-container {
+  @apply my-0;
+}
+
+/* 视频标题样式 */
+.video-title {
+  @apply mt-2 text-sm text-slate-600 dark:text-slate-400 text-center;
+}
+
+/* 视频加载占位 */
+.video-container::before {
+  content: '';
+  @apply absolute inset-0 flex items-center justify-center bg-slate-800;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='48' height='48' viewBox='0 0 24 24' fill='none' stroke='%2394a3b8' stroke-width='2'%3E%3Cpolygon points='5 3 19 12 5 21 5 3'%3E%3C/polygon%3E%3C/svg%3E");
+  background-repeat: no-repeat;
+  background-position: center;
+  z-index: 0;
+}
+
+.video-container iframe,
+.video-container video {
+  z-index: 1;
+}
+
+/* ========== Tabs 组件样式 ========== */
+
+.custom-tabs {
+  @apply my-6 border border-slate-200 dark:border-slate-700 rounded-lg overflow-hidden;
+}
+
+.tabs-header {
+  @apply flex flex-wrap gap-0 bg-slate-100 dark:bg-slate-800 border-b border-slate-200 dark:border-slate-700;
+}
+
+.tab-button {
+  @apply px-4 py-3 text-sm font-medium text-slate-600 dark:text-slate-400 bg-transparent border-b-2 border-transparent transition-all duration-200 cursor-pointer;
+}
+
+.tab-button:hover {
+  @apply text-slate-900 dark:text-slate-200 bg-slate-50 dark:bg-slate-700/50;
+}
+
+.tab-button.active {
+  @apply text-primary-600 dark:text-primary-400 bg-white dark:bg-slate-900 border-b-2 border-primary-500;
+}
+
+.tabs-content {
+  @apply bg-white dark:bg-slate-900;
+}
+
+.tab-panel {
+  @apply hidden p-4;
+}
+
+.tab-panel.active {
+  @apply block;
+}
+
+/* Tab 内容样式 */
+.tab-panel p {
+  @apply mb-3 last:mb-0 text-slate-700 dark:text-slate-300;
+}
+
+.tab-panel table {
+  @apply w-full my-3;
+}
+
+.tab-panel th {
+  @apply px-3 py-2 text-left text-sm font-semibold text-slate-900 dark:text-slate-100 bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700;
+}
+
+.tab-panel td {
+  @apply px-3 py-2 text-sm text-slate-700 dark:text-slate-300 border border-slate-200 dark:border-slate-700;
+}
+
+.tab-panel blockquote {
+  @apply my-3 pl-4 py-2 border-l-4 border-primary-300 dark:border-primary-600 bg-primary-50 dark:bg-primary-900/20 rounded-r-lg;
+}
+
+.tab-panel blockquote p {
+  @apply text-slate-600 dark:text-slate-300 mb-0;
+}
+
+.tab-panel ul,
+.tab-panel ol {
+  @apply my-3 pl-6;
+}
+
+.tab-panel li {
+  @apply mb-1 text-slate-700 dark:text-slate-300;
+}
+
+/* Tab 内的容器样式 */
+.tab-panel .custom-container {
+  @apply my-3;
+}

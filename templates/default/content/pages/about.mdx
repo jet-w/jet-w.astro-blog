@@ -1,0 +1,93 @@
+---
+title: 关于
+description: 了解更多关于博主和博客的信息
+---
+
+import { siteConfig } from '@/config';
+import TagCard from '@jet-w/astro-blog/components/about/TagCard.astro';
+import IconCard from '@jet-w/astro-blog/components/about/IconCard.astro';
+import TimelineCard from '@jet-w/astro-blog/components/about/TimelineCard.astro';
+import ContentCard from '@jet-w/astro-blog/components/about/ContentCard.astro';
+import SocialLinks from '@jet-w/astro-blog/components/about/SocialLinks.astro';
+
+<div class="max-w-4xl mx-auto">
+
+{/* 个人介绍区域 */}
+<div class="text-center mb-16">
+  {siteConfig.avatar && (
+    <div class="mb-8">
+      <img
+        src={siteConfig.avatar}
+        alt={siteConfig.author}
+        class="w-32 h-32 rounded-full mx-auto shadow-lg border-4 border-white dark:border-slate-800"
+      />
+    </div>
+  )}
+
+  <h1 class="text-4xl font-bold text-slate-900 dark:text-slate-100 mb-4">
+    你好，我是 {siteConfig.author}
+  </h1>
+
+  <p class="text-xl text-slate-600 dark:text-slate-400 mb-8 leading-relaxed">
+    一名热爱技术的前端开发者，专注于现代Web开发技术栈。
+    喜欢探索新技术，分享学习心得，希望通过这个博客能够帮助到更多的开发者。
+  </p>
+
+  <SocialLinks />
+</div>
+
+{/* 技能和兴趣 */}
+<div class="grid grid-cols-1 md:grid-cols-2 mb-16" style="gap: 2rem;">
+
+<TagCard
+  title="技术栈"
+  groups={[
+    { name: '前端技术', tags: ['Vue.js', 'TypeScript', 'Astro', '...'], color: 'primary' },
+    { name: '样式和工具', tags: ['Tailwind CSS', 'Sass', 'Vite', '...'], color: 'secondary' },
+    { name: '后端技术', tags: ['Node.js', 'Python', 'C++', 'C#', 'Java', 'SQL', '...'], color: 'accent' },
+    { name: '数据库', tags: ['PostgreSQL', 'MongoDB', 'Redis', 'DynamoDB', '...'], color: 'success' },
+    { name: '平台', tags: ['AWS'], color: 'info' }
+  ]}
+/>
+
+<IconCard
+  title="兴趣爱好"
+  items={[
+    { icon: 'code', title: '编程', description: '热爱探索新技术，参与开源项目', color: 'primary' },
+    { icon: 'book', title: '阅读', description: '喜欢阅读技术书籍和历史故事书', color: 'secondary' },
+    { icon: 'music', title: '音乐', description: '编程时喜欢听各种类型的音乐', color: 'accent' },
+    { icon: 'video', title: '视频', description: '喜欢看知识及故事分享的视频内容', color: 'accent' }
+  ]}
+/>
+
+</div>
+
+{/* 博客信息 */}
+<ContentCard title="关于这个博客" class="mb-16">
+
+这个博客基于 **Astro** 框架构建，使用了 **Vue 3**、**TypeScript** 和 **Tailwind CSS** 等现代技术栈。
+设计灵感来源于 VuePress Theme Hope，追求简洁、现代的视觉体验。
+
+在这里，我会分享：
+
+- 前端开发技术和最佳实践
+- 新技术的学习心得和总结
+- 项目开发过程中的经验分享
+- 工具推荐和效率提升技巧
+
+如果您对文章内容有任何疑问或建议，欢迎通过社交媒体或邮件与我联系。
+也欢迎在 GitHub 上查看这个博客的源代码，如果对您有帮助，不妨给个 Star!
+
+</ContentCard>
+
+{/* 时间线 */}
+{/* <TimelineCard
+  title="发展历程"
+  events={[
+    { year: '2025', title: '博客创建', description: '使用 Astro 重新构建个人技术博客，采用现代化的技术栈和设计理念。', color: 'primary' },
+    { year: '2024', title: '技术成长', description: '深入学习 Vue 3、TypeScript 和各种前端工程化工具，参与多个项目开发。', color: 'secondary' },
+    { year: '2023', title: '前端入门', description: '开始系统学习前端开发，从 HTML、CSS、JavaScript 基础开始。', color: 'accent' }
+  ]}
+/> */}
+
+</div>

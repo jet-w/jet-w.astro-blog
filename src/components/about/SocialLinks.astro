@@ -1,0 +1,54 @@
+---
+/**
+ * 社交链接组件
+ *
+ * 使用方式:
+ * <SocialLinks /> // 使用配置文件中的社交链接
+ *
+ * 或传入自定义链接:
+ * <SocialLinks links={[
+ *   { type: 'github', url: 'https://github.com/username' },
+ *   { type: 'twitter', url: 'https://twitter.com/username', icon: '...' }
+ * ]} />
+ */
+
+import {
+  socialLinks as configSocialLinks,
+  defaultIcons,
+  type SocialLink
+} from '@jet-w/astro-blog/config';
+
+export interface Props {
+  links?: SocialLink[];
+}
+
+const { links } = Astro.props;
+
+// 如果没有传入 links，则使用配置文件中的社交链接
+const socialLinksData: SocialLink[] = links || configSocialLinks;
+
+/**
+ * 获取图标路径，优先使用自定义icon，否则使用默认图标
+ */
+function getIcon(link: SocialLink): string {
+  return link.icon || defaultIcons[link.type] || '';
+}
+---
+
+{socialLinksData.length > 0 && (
+  <div class="flex justify-center space-x-6 mt-8">
+    {socialLinksData.map((link) => (
+      <a
+        href={link.url}
+        target={link.type === 'email' ? undefined : '_blank'}
+        rel={link.type === 'email' ? undefined : 'noopener noreferrer'}
+        class="text-slate-600 dark:text-slate-400 hover:text-primary-500 transition-colors"
+        aria-label={link.label || link.type}
+      >
+        <svg class="w-8 h-8" fill="currentColor" viewBox="0 0 24 24">
+          <path d={getIcon(link)} />
+        </svg>
+      </a>
+    ))}
+  </div>
+)}

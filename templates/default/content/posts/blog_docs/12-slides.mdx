@@ -1,0 +1,552 @@
+---
+title: 幻灯片演示
+description: 使用 Reveal.js 创建专业的演示文稿
+pubDate: 2025-01-05
+author: Astro Blog
+categories:
+  - 博客教程
+tags:
+  - 幻灯片
+  - Reveal.js
+  - 演示
+---
+
+import Slides from '@jet-w/astro-blog/components/media/Slides.astro';
+
+# 幻灯片演示
+
+博客系统集成了 [Reveal.js](https://revealjs.com/)，让你可以直接使用 Markdown 创建专业的演示文稿。
+
+## 两种使用方式
+
+博客系统提供了两种创建幻灯片的方式：
+
+| 方式 | 目录 | 说明 | 适用场景 |
+|------|------|------|----------|
+| **独立幻灯片** | `content/slides/` | 专门的幻灯片页面 | 独立演示、可复用内容 |
+| **文章内幻灯片** | `content/posts/` | 在文章中使用 `layout: slides` | 与博客内容结合 |
+
+## 方式一：独立幻灯片
+
+在 `content/slides/` 目录下创建 `.md` 文件：
+
+```markdown
+---
+title: 我的演示
+description: 演示描述
+pubDate: 2025-01-05
+theme: black
+slideNumber: true
+---
+
+# 欢迎
+
+这是第一页
+
+---
+
+## 第二页
+
+使用 `---` 分隔幻灯片
+
+---
+
+# 完成！
+```
+
+访问路径：`/slides/我的演示`
+
+::: tip 幻灯片列表
+访问 `/slides` 可以查看所有独立幻灯片的列表页面。
+:::
+
+### 基础演示
+
+<Slides src="/slides/docs/basic-demo" height="400px" />
+
+## 方式二：文章内幻灯片
+
+在 `content/posts/` 目录下的任何位置创建 `.md` 文件，添加 `layout: slides` 即可：
+
+```markdown
+---
+title: 技术分享
+description: 在文章目录中的幻灯片
+pubDate: 2025-01-05
+tags:
+  - 技术
+  - 分享
+categories:
+  - 演示
+layout: slides
+theme: white
+transition: fade
+slideNumber: true
+---
+
+# 技术分享
+
+这是在 posts 目录中的幻灯片
+
+---
+
+## 功能特点
+
+- 与博客文章在同一目录
+- 支持分类和标签
+- 会出现在文章列表中
+```
+
+访问路径：`/posts/目录/文件名`
+
+::: note 示例
+查看 [/posts/test/test-slides](/posts/test/test-slides) 查看实际效果。
+:::
+
+## Frontmatter 配置
+
+### 独立幻灯片 (content/slides/)
+
+| 字段 | 类型 | 默认值 | 说明 |
+|------|------|--------|------|
+| `title` | string | - | **必填**，演示标题 |
+| `description` | string | - | 演示描述 |
+| `pubDate` | date | - | 发布日期 |
+| `author` | string | - | 作者 |
+| `tags` | array | [] | 标签列表 |
+| `theme` | string | `black` | Reveal.js 主题 |
+| `transition` | string | `slide` | 过渡动画 |
+| `controls` | boolean | `true` | 显示控制箭头 |
+| `progress` | boolean | `true` | 显示进度条 |
+| `center` | boolean | `true` | 内容垂直居中 |
+| `slideNumber` | boolean | `false` | 显示页码 |
+| `hash` | boolean | `true` | URL 包含 hash |
+| `draft` | boolean | `false` | 草稿状态 |
+
+### 文章内幻灯片 (content/posts/)
+
+除了上述字段外，还支持：
+
+| 字段 | 类型 | 默认值 | 说明 |
+|------|------|--------|------|
+| `layout` | string | `default` | 设为 `slides` 启用幻灯片 |
+| `categories` | array | [] | 分类（会出现在博客分类中） |
+
+### 完整配置示例
+
+```yaml
+---
+title: 产品发布会
+description: 2025年新产品发布演示
+pubDate: 2025-01-05
+author: 产品经理
+tags:
+  - 产品
+  - 发布
+categories:
+  - 演示
+layout: slides        # 关键：启用幻灯片布局
+theme: night
+transition: fade
+controls: true
+progress: true
+center: true
+slideNumber: true
+draft: false
+---
+```
+
+## 可用主题
+
+| 主题 | 说明 | 适用场景 |
+|------|------|----------|
+| `black` | 黑色背景，白色文字 | 通用演示（默认） |
+| `white` | 白色背景，黑色文字 | 正式场合、打印 |
+| `league` | 深灰色背景 | 商务演示 |
+| `beige` | 米色背景 | 温馨风格 |
+| `night` | 深蓝色背景 | 夜间模式 |
+| `serif` | 衬线字体风格 | 学术演示 |
+| `simple` | 极简白色 | 简约风格 |
+| `solarized` | Solarized 配色 | 开发者演示 |
+| `blood` | 深红色强调 | 有冲击力的演示 |
+| `moon` | 深蓝月光风格 | 创意演示 |
+
+### 主题演示
+
+<Slides src="/slides/docs/theme-demo" height="400px" />
+
+## 过渡动画
+
+| 值 | 效果 |
+|------|------|
+| `none` | 无动画 |
+| `fade` | 淡入淡出 |
+| `slide` | 滑动（默认） |
+| `convex` | 凸面翻转 |
+| `concave` | 凹面翻转 |
+| `zoom` | 缩放 |
+
+## 幻灯片语法
+
+### 水平幻灯片
+
+使用 `---` 分隔水平幻灯片（主线内容）：
+
+```markdown
+# 第一页
+
+内容...
+
+---
+
+# 第二页
+
+按 → 键切换
+
+---
+
+# 第三页
+
+继续...
+```
+
+### 垂直幻灯片
+
+使用 `----` 分隔垂直幻灯片（章节子内容）：
+
+```markdown
+# 第一章
+
+概述内容
+
+----
+
+## 1.1 详细说明
+
+按 ↓ 键查看
+
+----
+
+## 1.2 更多内容
+
+按 → 返回主线
+
+---
+
+# 第二章
+
+新的章节
+```
+
+### 垂直幻灯片演示
+
+<Slides src="/slides/docs/vertical-demo" height="400px" />
+
+::: tip 垂直幻灯片用途
+垂直幻灯片适合：
+- 章节下的详细展开
+- 可选的补充内容
+- 深入解释某个概念
+:::
+
+## 代码高亮
+
+支持所有主流编程语言：
+
+### 代码演示
+
+<Slides src="/slides/docs/code-demo" height="400px" />
+
+## 数学公式
+
+支持 LaTeX 语法：
+
+```markdown
+## 数学公式
+
+行内公式：$E = mc^2$
+
+块级公式：
+
+$$
+\int_{-\infty}^{\infty} e^{-x^2} dx = \sqrt{\pi}
+$$
+```
+
+### 数学公式演示
+
+<Slides src="/slides/docs/math-demo" height="400px" />
+
+## Mermaid 图表
+
+幻灯片支持 Mermaid 图表，可绘制流程图、时序图、类图等：
+
+```markdown
+## 流程图
+
+​```mermaid
+graph TD
+    A[开始] --> B{条件判断}
+    B -->|是| C[执行操作]
+    B -->|否| D[跳过]
+    C --> E[结束]
+    D --> E
+​```
+```
+
+### Mermaid 演示
+
+<Slides src="/slides/docs/mermaid-demo" height="400px" />
+
+## ECharts 图表
+
+幻灯片支持 ECharts 交互式图表：
+
+```markdown
+## 折线图
+
+​```echarts
+{
+  "xAxis": {
+    "type": "category",
+    "data": ["Mon", "Tue", "Wed", "Thu", "Fri"]
+  },
+  "yAxis": { "type": "value" },
+  "series": [{
+    "data": [150, 230, 224, 218, 135],
+    "type": "line"
+  }]
+}
+​```
+```
+
+### ECharts 演示
+
+<Slides src="/slides/docs/echarts-demo" height="400px" />
+
+## 表格
+
+```markdown
+## 功能对比
+
+| 功能 | 免费版 | 专业版 |
+|------|:------:|:------:|
+| 基础功能 | ✓ | ✓ |
+| 高级分析 | ✗ | ✓ |
+| API 访问 | ✗ | ✓ |
+| 技术支持 | 邮件 | 24/7 |
+```
+
+## 分栏布局
+
+```markdown
+## 对比展示
+
+<div style="display: flex; gap: 2em;">
+<div style="flex: 1;">
+
+### 方案 A
+
+- 成本低
+- 实现快
+- 风险小
+
+</div>
+<div style="flex: 1;">
+
+### 方案 B
+
+- 性能高
+- 扩展性好
+- 长期收益
+
+</div>
+</div>
+```
+
+## Fragment 动画
+
+逐步显示内容：
+
+```markdown
+## 核心功能
+
+<p class="fragment">1. 智能分析</p>
+<p class="fragment">2. 自动化处理</p>
+<p class="fragment">3. 可视化报表</p>
+<p class="fragment fade-up">4. 实时监控</p>
+```
+
+### Fragment 演示
+
+<Slides src="/slides/docs/fragment-demo" height="400px" />
+
+| 类名 | 效果 |
+|------|------|
+| `fragment` | 默认淡入 |
+| `fragment fade-out` | 淡出 |
+| `fragment fade-up` | 从下方淡入 |
+| `fragment fade-down` | 从上方淡入 |
+| `fragment highlight-red` | 高亮红色 |
+| `fragment highlight-green` | 高亮绿色 |
+| `fragment highlight-blue` | 高亮蓝色 |
+
+## 演讲者备注
+
+```markdown
+## 重要观点
+
+这是观众看到的内容
+
+Note:
+这是演讲者备注，只在演讲者视图中显示。
+- 记得强调这一点
+- 准备回答相关问题
+```
+
+按 `S` 键打开演讲者视图。
+
+## 键盘快捷键
+
+| 快捷键 | 功能 |
+|--------|------|
+| `→` / `Space` | 下一页 |
+| `←` | 上一页 |
+| `↑` | 上一个垂直页 |
+| `↓` | 下一个垂直页 |
+| `Esc` / `O` | 概览模式 |
+| `F` | 全屏模式 |
+| `S` | 演讲者视图 |
+| `B` / `.` | 黑屏暂停 |
+| `Home` | 第一页 |
+| `End` | 最后一页 |
+
+## 在文章中嵌入幻灯片
+
+除了独立的幻灯片页面，还可以在普通文章（`.mdx`）中嵌入幻灯片。
+
+### 使用 Slides 组件
+
+```mdx
+---
+title: 我的文章
+---
+
+import Slides from '@jet-w/astro-blog/components/media/Slides.astro';
+
+# 文章内容
+
+下面是嵌入的幻灯片：
+
+<Slides src="/slides/demo" height="500px" />
+
+继续阅读...
+```
+
+### Slides 组件属性
+
+| 属性 | 类型 | 默认值 | 说明 |
+|------|------|--------|------|
+| `src` | string | - | 幻灯片 URL |
+| `height` | string | - | 容器高度 |
+| `aspectRatio` | string | `"16/9"` | 宽高比 |
+| `theme` | string | `"black"` | 主题 |
+| `transition` | string | `"slide"` | 过渡效果 |
+| `controls` | boolean | `true` | 控制箭头 |
+| `progress` | boolean | `true` | 进度条 |
+| `slideNumber` | boolean | `false` | 页码 |
+
+### 内联幻灯片内容
+
+```mdx
+import Slides from '@jet-w/astro-blog/components/media/Slides.astro';
+
+<Slides height="400px" theme="white">
+# 欢迎
+
+内嵌幻灯片
+
+---
+
+## 第二页
+
+- 要点一
+- 要点二
+
+---
+
+# 完成！
+</Slides>
+```
+
+## 完整幻灯片示例
+
+点击下方幻灯片查看完整演示：
+
+<Slides src="/slides/demo" height="500px" />
+
+## 目录结构
+
+```
+content/
+├── slides/                    # 独立幻灯片目录
+│   ├── demo.md               # 示例演示
+│   ├── product-intro.md      # 产品介绍
+│   └── docs/                 # 文档演示幻灯片
+│       ├── basic-demo.md     # 基础演示
+│       ├── code-demo.md      # 代码高亮
+│       ├── vertical-demo.md  # 垂直幻灯片
+│       ├── math-demo.md      # 数学公式
+│       ├── fragment-demo.md  # Fragment 动画
+│       ├── theme-demo.md     # 主题演示
+│       ├── mermaid-demo.md   # Mermaid 图表
+│       └── echarts-demo.md   # ECharts 图表
+└── posts/                     # 博客文章目录
+    └── test/
+        └── test-slides.md    # layout: slides 的文章
+```
+
+## 常见问题
+
+### 幻灯片不显示？
+
+检查：
+1. 独立幻灯片：文件在 `content/slides/` 目录
+2. 文章幻灯片：添加了 `layout: slides`
+3. Frontmatter 格式正确（`---` 包围）
+4. `draft` 不是 `true`
+
+### layout: slides 不生效？
+
+确保：
+1. 文件在 `content/posts/` 目录下
+2. frontmatter 中 `layout: slides` 正确设置
+3. 重启开发服务器清理缓存
+
+### 代码高亮不工作？
+
+确保代码块指定了语言：
+
+````markdown
+```javascript
+// 正确：指定语言
+const x = 1;
+```
+````
+
+### 数学公式不渲染？
+
+使用正确的 LaTeX 语法：
+- 行内：`$E = mc^2$`
+- 块级：`$$公式$$`
+
+## 相关示例
+
+- [独立幻灯片示例](/slides/demo) - 查看 `content/slides/demo.md`
+- [文章内幻灯片](/posts/test/test-slides) - 查看 `content/posts/test/test-slides.md`
+
+## 下一步
+
+- 阅读 [Reveal.js 官方文档](https://revealjs.com/) 了解更多高级功能
+- 查看 [Markdown 基础](./03-markdown-basic) 复习语法
+- 了解 [代码块](./05-code-blocks) 使用技巧

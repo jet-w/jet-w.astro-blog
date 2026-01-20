@@ -1,0 +1,594 @@
+---
+import { getCollection } from 'astro:content';
+import Icon from '../ui/Icon.astro';
+import { sidebarConfig } from '@jet-w/astro-blog/config';
+import {
+  processSidebarConfig,
+  getRecentPosts,
+  getPopularTags,
+  getArchives,
+  filterGroupsByPath,
+} from '@jet-w/astro-blog/utils/sidebar';
+
+interface Props {
+  currentPath?: string;
+}
+
+const { currentPath = Astro.url.pathname } = Astro.props;
+
+// 获取所有文章
+const allPosts = await getCollection('posts', ({ data }) => !data.draft);
+
+// 根据当前路径过滤侧边栏组
+const filteredGroups = filterGroupsByPath(sidebarConfig.groups, currentPath);
+
+// 创建过滤后的配置
+const filteredConfig = { ...sidebarConfig, groups: filteredGroups };
+
+// 处理侧边栏配置
+const processedGroups = await processSidebarConfig(filteredConfig, allPosts);
+
+// 获取其他数据
+const recentPosts = sidebarConfig.showRecentPosts
+  ? getRecentPosts(allPosts, sidebarConfig.recentPostsCount)
+  : [];
+
+const popularTags = sidebarConfig.showPopularTags
+  ? getPopularTags(allPosts, sidebarConfig.popularTagsCount)
+  : [];
+
+const archives = sidebarConfig.showArchives
+  ? getArchives(allPosts, sidebarConfig.archivesCount)
+  : [];
+---
+
+<div class="space-y-8 p-6">
+  {/* 渲染配置的侧边栏组 */}
+  {processedGroups.map((group) => (
+    group.type === 'divider' ? (
+      <div class="sidebar-divider">
+        {group.title && (
+          <span class="text-xs font-semibold text-slate-500 dark:text-slate-400 uppercase tracking-wider">
+            {group.title}
+          </span>
+        )}
+        <div class="border-b border-slate-200 dark:border-slate-700 mt-2"></div>
+      </div>
+    ) : (
+      <section class="doc-tree-section">
+        <h3 class="text-lg font-semibold text-slate-900 dark:text-slate-100 mb-4 border-b border-slate-200 dark:border-slate-700 pb-2 flex items-center gap-2">
+          {group.icon ? (
+            <Icon icon={group.icon} size="1.25em" class="text-primary-500" />
+          ) : (
+            <svg class="w-5 h-5 text-primary-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 7v10a2 2 0 002 2h14a2 2 0 002-2V9a2 2 0 00-2-2h-6l-2-2H5a2 2 0 00-2 2z" />
+            </svg>
+          )}
+          {group.title}
+        </h3>
+        <nav class="doc-tree text-sm" data-collapsed={group.collapsed}>
+          <ul class="space-y-1">
+            {group.tree?.map((node) => (
+              <li class="tree-node">
+                {node.isFolder ? (
+                  <div class="tree-folder">
+                    <button
+                      class="tree-folder-toggle w-full flex items-center gap-2 px-2 py-1.5 rounded-lg hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors text-left"
+                      data-folder-name={node.name}
+                      data-default-collapsed={node.collapsed}
+                    >
+                      <svg class="tree-chevron w-4 h-4 text-slate-400 transition-transform duration-200" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7" />
+                      </svg>
+                      {node.icon ? (
+                        <Icon icon={node.icon} size="1.1em" class="flex-shrink-0" />
+                      ) : (
+                        <svg class="tree-folder-icon w-4 h-4 text-amber-500 flex-shrink-0" fill="currentColor" viewBox="0 0 24 24">
+                          <path d="M10 4H4a2 2 0 00-2 2v12a2 2 0 002 2h16a2 2 0 002-2V8a2 2 0 00-2-2h-8l-2-2z" />
+                        </svg>
+                      )}
+                      <span class="text-slate-700 dark:text-slate-300 font-medium truncate">
+                        {node.displayName || node.name}
+                      </span>
+                      {node.badge && (
+                        <span class={`ml-1 px-1.5 py-0.5 text-xs rounded ${
+                          node.badgeType === 'error' ? 'bg-red-100 text-red-600 dark:bg-red-900/30 dark:text-red-400' :
+                          node.badgeType === 'warning' ? 'bg-yellow-100 text-yellow-600 dark:bg-yellow-900/30 dark:text-yellow-400' :
+                          node.badgeType === 'success' ? 'bg-green-100 text-green-600 dark:bg-green-900/30 dark:text-green-400' :
+                          'bg-blue-100 text-blue-600 dark:bg-blue-900/30 dark:text-blue-400'
+                        }`}>
+                          {node.badge}
+                        </span>
+                      )}
+                      <span class="text-xs text-slate-400 ml-auto">{node.children.length}</span>
+                    </button>
+                    <ul class="tree-children ml-4 mt-1 space-y-1 hidden">
+                      {node.children.map((child) => (
+                        <li class="tree-node">
+                          {child.isFolder ? (
+                            <div class="tree-folder">
+                              <button
+                                class="tree-folder-toggle w-full flex items-center gap-2 px-2 py-1.5 rounded-lg hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors text-left"
+                                data-folder-name={child.name}
+                                data-default-collapsed={child.collapsed}
+                              >
+                                <svg class="tree-chevron w-4 h-4 text-slate-400 transition-transform duration-200" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7" />
+                                </svg>
+                                {child.icon ? (
+                                  <Icon icon={child.icon} size="1.1em" class="flex-shrink-0" />
+                                ) : (
+                                  <svg class="tree-folder-icon w-4 h-4 text-amber-500 flex-shrink-0" fill="currentColor" viewBox="0 0 24 24">
+                                    <path d="M10 4H4a2 2 0 00-2 2v12a2 2 0 002 2h16a2 2 0 002-2V8a2 2 0 00-2-2h-8l-2-2z" />
+                                  </svg>
+                                )}
+                                <span class="text-slate-700 dark:text-slate-300 font-medium truncate">
+                                  {child.displayName || child.name}
+                                </span>
+                                {child.badge && (
+                                  <span class={`ml-1 px-1.5 py-0.5 text-xs rounded ${
+                                    child.badgeType === 'error' ? 'bg-red-100 text-red-600 dark:bg-red-900/30 dark:text-red-400' :
+                                    child.badgeType === 'warning' ? 'bg-yellow-100 text-yellow-600 dark:bg-yellow-900/30 dark:text-yellow-400' :
+                                    child.badgeType === 'success' ? 'bg-green-100 text-green-600 dark:bg-green-900/30 dark:text-green-400' :
+                                    'bg-blue-100 text-blue-600 dark:bg-blue-900/30 dark:text-blue-400'
+                                  }`}>
+                                    {child.badge}
+                                  </span>
+                                )}
+                                <span class="text-xs text-slate-400 ml-auto">{child.children.length}</span>
+                              </button>
+                              <ul class="tree-children ml-4 mt-1 space-y-1 hidden">
+                                {child.children.map((grandChild) => (
+                                  <li class="tree-node">
+                                    {grandChild.isFolder ? (
+                                      <div class="tree-folder">
+                                        <button
+                                          class="tree-folder-toggle w-full flex items-center gap-2 px-2 py-1.5 rounded-lg hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors text-left"
+                                          data-folder-name={grandChild.name}
+                                        >
+                                          <svg class="tree-chevron w-4 h-4 text-slate-400 transition-transform duration-200" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7" />
+                                          </svg>
+                                          {grandChild.icon ? (
+                                            <Icon icon={grandChild.icon} size="1.1em" class="flex-shrink-0" />
+                                          ) : (
+                                            <svg class="tree-folder-icon w-4 h-4 text-amber-500 flex-shrink-0" fill="currentColor" viewBox="0 0 24 24">
+                                              <path d="M10 4H4a2 2 0 00-2 2v12a2 2 0 002 2h16a2 2 0 002-2V8a2 2 0 00-2-2h-8l-2-2z" />
+                                            </svg>
+                                          )}
+                                          <span class="text-slate-700 dark:text-slate-300 font-medium truncate">
+                                            {grandChild.displayName || grandChild.name}
+                                          </span>
+                                          <span class="text-xs text-slate-400 ml-auto">{grandChild.children.length}</span>
+                                        </button>
+                                        <ul class="tree-children ml-4 mt-1 space-y-1 hidden">
+                                          {grandChild.children.map((item) => (
+                                            <li class="tree-node">
+                                              {item.link ? (
+                                                <a
+                                                  href={item.link}
+                                                  target="_blank"
+                                                  rel="noopener noreferrer"
+                                                  class="tree-file flex items-center gap-2 px-2 py-1.5 rounded-lg hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors"
+                                                  title={item.title}
+                                                >
+                                                  {item.icon ? (
+                                                    <Icon icon={item.icon} size="1em" class="flex-shrink-0" />
+                                                  ) : (
+                                                    <svg class="w-4 h-4 text-slate-400 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                                      <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14" />
+                                                    </svg>
+                                                  )}
+                                                  <span class="text-slate-600 dark:text-slate-400 truncate hover:text-primary-500">
+                                                    {item.title || item.name}
+                                                  </span>
+                                                </a>
+                                              ) : (
+                                                <a
+                                                  href={`/posts/${item.slug?.toLowerCase()}`}
+                                                  class="tree-file flex items-center gap-2 px-2 py-1.5 rounded-lg hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors"
+                                                  title={item.title}
+                                                >
+                                                  {item.icon ? (
+                                                    <Icon icon={item.icon} size="1em" class="flex-shrink-0" />
+                                                  ) : (
+                                                    <svg class="w-4 h-4 text-slate-400 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                                      <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+                                                    </svg>
+                                                  )}
+                                                  <span class="text-slate-600 dark:text-slate-400 truncate hover:text-primary-500">
+                                                    {item.title || item.name}
+                                                  </span>
+                                                </a>
+                                              )}
+                                            </li>
+                                          ))}
+                                        </ul>
+                                      </div>
+                                    ) : grandChild.link ? (
+                                      <a
+                                        href={grandChild.link}
+                                        target="_blank"
+                                        rel="noopener noreferrer"
+                                        class="tree-file flex items-center gap-2 px-2 py-1.5 rounded-lg hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors"
+                                        title={grandChild.title}
+                                      >
+                                        {grandChild.icon ? (
+                                          <Icon icon={grandChild.icon} size="1em" class="flex-shrink-0" />
+                                        ) : (
+                                          <svg class="w-4 h-4 text-slate-400 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14" />
+                                          </svg>
+                                        )}
+                                        <span class="text-slate-600 dark:text-slate-400 truncate hover:text-primary-500">
+                                          {grandChild.title || grandChild.name}
+                                        </span>
+                                      </a>
+                                    ) : (
+                                      <a
+                                        href={`/posts/${grandChild.slug?.toLowerCase()}`}
+                                        class="tree-file flex items-center gap-2 px-2 py-1.5 rounded-lg hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors"
+                                        title={grandChild.title}
+                                      >
+                                        {grandChild.icon ? (
+                                          <Icon icon={grandChild.icon} size="1em" class="flex-shrink-0" />
+                                        ) : (
+                                          <svg class="w-4 h-4 text-slate-400 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+                                          </svg>
+                                        )}
+                                        <span class="text-slate-600 dark:text-slate-400 truncate hover:text-primary-500">
+                                          {grandChild.title || grandChild.name}
+                                        </span>
+                                        {grandChild.badge && (
+                                          <span class={`ml-1 px-1.5 py-0.5 text-xs rounded ${
+                                            grandChild.badgeType === 'error' ? 'bg-red-100 text-red-600 dark:bg-red-900/30 dark:text-red-400' :
+                                            grandChild.badgeType === 'warning' ? 'bg-yellow-100 text-yellow-600 dark:bg-yellow-900/30 dark:text-yellow-400' :
+                                            grandChild.badgeType === 'success' ? 'bg-green-100 text-green-600 dark:bg-green-900/30 dark:text-green-400' :
+                                            'bg-blue-100 text-blue-600 dark:bg-blue-900/30 dark:text-blue-400'
+                                          }`}>
+                                            {grandChild.badge}
+                                          </span>
+                                        )}
+                                      </a>
+                                    )}
+                                  </li>
+                                ))}
+                              </ul>
+                            </div>
+                          ) : child.link ? (
+                            <a
+                              href={child.link}
+                              target="_blank"
+                              rel="noopener noreferrer"
+                              class="tree-file flex items-center gap-2 px-2 py-1.5 rounded-lg hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors"
+                              title={child.title}
+                            >
+                              {child.icon ? (
+                                <Icon icon={child.icon} size="1em" class="flex-shrink-0" />
+                              ) : (
+                                <svg class="w-4 h-4 text-slate-400 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14" />
+                                </svg>
+                              )}
+                              <span class="text-slate-600 dark:text-slate-400 truncate hover:text-primary-500">
+                                {child.title || child.name}
+                              </span>
+                            </a>
+                          ) : (
+                            <a
+                              href={`/posts/${child.slug?.toLowerCase()}`}
+                              class="tree-file flex items-center gap-2 px-2 py-1.5 rounded-lg hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors"
+                              title={child.title}
+                            >
+                              {child.icon ? (
+                                <Icon icon={child.icon} size="1em" class="flex-shrink-0" />
+                              ) : (
+                                <svg class="w-4 h-4 text-slate-400 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+                                </svg>
+                              )}
+                              <span class="text-slate-600 dark:text-slate-400 truncate hover:text-primary-500">
+                                {child.title || child.name}
+                              </span>
+                              {child.badge && (
+                                <span class={`ml-1 px-1.5 py-0.5 text-xs rounded ${
+                                  child.badgeType === 'error' ? 'bg-red-100 text-red-600 dark:bg-red-900/30 dark:text-red-400' :
+                                  child.badgeType === 'warning' ? 'bg-yellow-100 text-yellow-600 dark:bg-yellow-900/30 dark:text-yellow-400' :
+                                  child.badgeType === 'success' ? 'bg-green-100 text-green-600 dark:bg-green-900/30 dark:text-green-400' :
+                                  'bg-blue-100 text-blue-600 dark:bg-blue-900/30 dark:text-blue-400'
+                                }`}>
+                                  {child.badge}
+                                </span>
+                              )}
+                            </a>
+                          )}
+                        </li>
+                      ))}
+                    </ul>
+                  </div>
+                ) : node.link ? (
+                  <a
+                    href={node.link}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    class="tree-file flex items-center gap-2 px-2 py-1.5 rounded-lg hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors"
+                    title={node.title}
+                  >
+                    {node.icon ? (
+                      <Icon icon={node.icon} size="1em" class="flex-shrink-0" />
+                    ) : (
+                      <svg class="w-4 h-4 text-slate-400 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14" />
+                      </svg>
+                    )}
+                    <span class="text-slate-600 dark:text-slate-400 truncate hover:text-primary-500">
+                      {node.title || node.name}
+                    </span>
+                  </a>
+                ) : (
+                  <a
+                    href={`/posts/${node.slug?.toLowerCase()}`}
+                    class="tree-file flex items-center gap-2 px-2 py-1.5 rounded-lg hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors"
+                    title={node.title}
+                  >
+                    {node.icon ? (
+                      <Icon icon={node.icon} size="1em" class="flex-shrink-0" />
+                    ) : (
+                      <svg class="w-4 h-4 text-slate-400 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+                      </svg>
+                    )}
+                    <span class="text-slate-600 dark:text-slate-400 truncate hover:text-primary-500">
+                      {node.title || node.name}
+                    </span>
+                    {node.badge && (
+                      <span class={`ml-1 px-1.5 py-0.5 text-xs rounded ${
+                        node.badgeType === 'error' ? 'bg-red-100 text-red-600 dark:bg-red-900/30 dark:text-red-400' :
+                        node.badgeType === 'warning' ? 'bg-yellow-100 text-yellow-600 dark:bg-yellow-900/30 dark:text-yellow-400' :
+                        node.badgeType === 'success' ? 'bg-green-100 text-green-600 dark:bg-green-900/30 dark:text-green-400' :
+                        'bg-blue-100 text-blue-600 dark:bg-blue-900/30 dark:text-blue-400'
+                      }`}>
+                        {node.badge}
+                      </span>
+                    )}
+                  </a>
+                )}
+              </li>
+            ))}
+          </ul>
+        </nav>
+      </section>
+    )
+  ))}
+
+  {/* 最新文章 */}
+  {sidebarConfig.showRecentPosts && recentPosts.length > 0 && (
+    <section>
+      <h3 class="text-lg font-semibold text-slate-900 dark:text-slate-100 mb-4 border-b border-slate-200 dark:border-slate-700 pb-2">
+        最新文章
+      </h3>
+      <div class="space-y-3">
+        {recentPosts.map((post) => (
+          <article class="group">
+            <a
+              href={`/posts/${post.id.toLowerCase()}`}
+              class="block p-3 rounded-lg hover:bg-slate-50 dark:hover:bg-slate-800 transition-colors"
+            >
+              <h4 class="text-sm font-medium text-slate-900 dark:text-slate-100 group-hover:text-primary-500 line-clamp-2 mb-1">
+                {post.data.title}
+              </h4>
+              {post.data.pubDate && (
+                <time class="text-xs text-slate-500 dark:text-slate-400">
+                  {new Date(post.data.pubDate).toLocaleDateString('zh-CN')}
+                </time>
+              )}
+            </a>
+          </article>
+        ))}
+      </div>
+    </section>
+  )}
+
+  {/* 热门标签 */}
+  {sidebarConfig.showPopularTags && popularTags.length > 0 && (
+    <section>
+      <h3 class="text-lg font-semibold text-slate-900 dark:text-slate-100 mb-4 border-b border-slate-200 dark:border-slate-700 pb-2">
+        热门标签
+      </h3>
+      <div class="flex flex-wrap gap-2">
+        {popularTags.map((tag) => (
+          <a
+            href={`/tags/${tag.slug}`}
+            class="inline-flex items-center px-3 py-1 rounded-full text-xs font-medium bg-primary-100 dark:bg-primary-900/30 text-primary-700 dark:text-primary-300 hover:bg-primary-200 dark:hover:bg-primary-900/50 transition-colors"
+            style={`font-size: ${Math.min(14, 10 + tag.count * 0.5)}px`}
+          >
+            {tag.name}
+            <span class="ml-1 text-primary-500">({tag.count})</span>
+          </a>
+        ))}
+      </div>
+    </section>
+  )}
+
+  {/* 归档 */}
+  {sidebarConfig.showArchives && archives.length > 0 && (
+    <section>
+      <h3 class="text-lg font-semibold text-slate-900 dark:text-slate-100 mb-4 border-b border-slate-200 dark:border-slate-700 pb-2">
+        文章归档
+      </h3>
+      <div class="space-y-2">
+        {archives.map((archive) => (
+          <a
+            href={`/archives/${archive.year}/${String(archive.month).padStart(2, '0')}`}
+            class="flex items-center justify-between p-2 rounded-lg hover:bg-slate-50 dark:hover:bg-slate-800 transition-colors group"
+          >
+            <span class="text-sm text-slate-700 dark:text-slate-300 group-hover:text-primary-500">
+              {archive.year}年{archive.month}月
+            </span>
+            <span class="text-xs text-slate-500 dark:text-slate-400 bg-slate-100 dark:bg-slate-700 px-2 py-1 rounded-full">
+              {archive.count}
+            </span>
+          </a>
+        ))}
+      </div>
+    </section>
+  )}
+
+  {/* 友情链接 */}
+  {sidebarConfig.showFriendLinks && sidebarConfig.friendLinks && sidebarConfig.friendLinks.length > 0 && (
+    <section>
+      <h3 class="text-lg font-semibold text-slate-900 dark:text-slate-100 mb-4 border-b border-slate-200 dark:border-slate-700 pb-2">
+        友情链接
+      </h3>
+      <div class="space-y-2">
+        {sidebarConfig.friendLinks.map((link) => (
+          <a
+            href={link.url}
+            target="_blank"
+            rel="noopener noreferrer"
+            class="flex items-center gap-2 p-2 rounded-lg hover:bg-slate-50 dark:hover:bg-slate-800 transition-colors group"
+          >
+            {link.icon && <Icon icon={link.icon} size="1em" class="text-slate-500 group-hover:text-primary-500" />}
+            <span class="text-sm text-slate-700 dark:text-slate-300 group-hover:text-primary-500">
+              {link.title}
+            </span>
+          </a>
+        ))}
+      </div>
+    </section>
+  )}
+</div>
+
+<style>
+  .line-clamp-2 {
+    display: -webkit-box;
+    -webkit-line-clamp: 2;
+    -webkit-box-orient: vertical;
+    overflow: hidden;
+  }
+
+  /* 树形结构样式 */
+  .doc-tree {
+    max-height: 400px;
+    overflow-y: auto;
+  }
+
+  .doc-tree::-webkit-scrollbar {
+    width: 4px;
+  }
+
+  .doc-tree::-webkit-scrollbar-thumb {
+    @apply bg-slate-300 dark:bg-slate-600 rounded;
+  }
+
+  .tree-folder-toggle.expanded .tree-chevron {
+    transform: rotate(90deg);
+  }
+
+  .tree-children.show {
+    display: block !important;
+  }
+
+  .tree-file:hover span,
+  .tree-folder-toggle:hover span {
+    @apply text-primary-500;
+  }
+
+  /* 当前页面高亮 */
+  .tree-file.active {
+    @apply bg-primary-50 dark:bg-primary-900/20;
+  }
+
+  .tree-file.active span {
+    @apply text-primary-600 dark:text-primary-400 font-medium;
+  }
+
+  /* 分隔符样式 */
+  .sidebar-divider {
+    @apply py-2;
+  }
+</style>
+
+<script>
+  // 文档树交互功能
+  function initDocTree() {
+    const toggleButtons = document.querySelectorAll('.tree-folder-toggle');
+
+    toggleButtons.forEach(btn => {
+      btn.addEventListener('click', () => {
+        const children = btn.nextElementSibling;
+        const isExpanded = btn.classList.toggle('expanded');
+
+        if (children && children.classList.contains('tree-children')) {
+          children.classList.toggle('show', isExpanded);
+        }
+      });
+    });
+
+    // 高亮当前页面
+    const currentPath = window.location.pathname.replace(/\/$/, ''); // 移除尾部斜杠
+    const treeLinks = document.querySelectorAll('.tree-file');
+
+    treeLinks.forEach(link => {
+      const href = link.getAttribute('href')?.replace(/\/$/, ''); // 移除尾部斜杠
+      // 精确匹配：当前路径必须等于链接路径
+      if (href && currentPath === href) {
+        link.classList.add('active');
+
+        // 展开父级文件夹
+        let parent: Element | null = link.closest('.tree-children');
+        while (parent) {
+          parent.classList.add('show');
+          const toggle = parent.previousElementSibling;
+          if (toggle && toggle.classList.contains('tree-folder-toggle')) {
+            toggle.classList.add('expanded');
+          }
+          parent = parent.parentElement?.closest('.tree-children') || null;
+        }
+      }
+    });
+
+    // 处理默认折叠/展开状态
+    const docTrees = document.querySelectorAll('.doc-tree');
+    docTrees.forEach(tree => {
+      const isTreeCollapsed = tree.getAttribute('data-collapsed') === 'true';
+
+      // 处理所有文件夹的折叠状态
+      const allToggles = tree.querySelectorAll('.tree-folder-toggle');
+      allToggles.forEach(toggle => {
+        const shouldCollapse = toggle.getAttribute('data-default-collapsed') === 'true';
+        const isFirstLevel = toggle.closest('.tree-children') === null ||
+                            toggle.closest('ul')?.parentElement?.classList.contains('doc-tree');
+
+        // 跳过已经被高亮展开的
+        if (toggle.classList.contains('expanded')) return;
+
+        // 如果整个树设置为折叠，或者该文件夹设置为折叠，则不展开
+        if (isTreeCollapsed || shouldCollapse) {
+          // 保持折叠状态（默认就是折叠的）
+          return;
+        }
+
+        // 只自动展开第一层
+        if (isFirstLevel) {
+          const children = toggle.nextElementSibling;
+          if (children && children.classList.contains('tree-children')) {
+            children.classList.add('show');
+            toggle.classList.add('expanded');
+          }
+        }
+      });
+    });
+  }
+
+  // DOM 加载完成后初始化
+  if (document.readyState === 'loading') {
+    document.addEventListener('DOMContentLoaded', initDocTree);
+  } else {
+    initDocTree();
+  }
+
+  // 支持 Astro 页面切换时重新初始化
+  document.addEventListener('astro:page-load', initDocTree);
+</script>

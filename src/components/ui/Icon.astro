@@ -1,0 +1,187 @@
+---
+/**
+ * 通用图标组件
+ * 支持多种图标格式：
+ *
+ * 1. Emoji: 直接使用 emoji 字符，如 "📁" "🎉"
+ *
+ * 2. Font Awesome:
+ *    - "fa:folder" → <i class="fa-solid fa-folder"></i>
+ *    - "fa-brands:github" → <i class="fa-brands fa-github"></i>
+ *    - "fa-regular:star" → <i class="fa-regular fa-star"></i>
+ *
+ * 3. Material Icons:
+ *    - "mi:folder" → <span class="material-icons">folder</span>
+ *    - "mi-outlined:folder" → <span class="material-icons-outlined">folder</span>
+ *    - "mi-round:folder" → <span class="material-icons-round">folder</span>
+ *
+ * 4. Bootstrap Icons:
+ *    - "bi:folder" → <i class="bi bi-folder"></i>
+ *
+ * 5. Remix Icon:
+ *    - "ri:folder-line" → <i class="ri-folder-line"></i>
+ *    - "ri:folder-fill" → <i class="ri-folder-fill"></i>
+ *
+ * 6. Ionicons:
+ *    - "ion:folder" → <ion-icon name="folder"></ion-icon>
+ *    - "ion:folder-outline" → <ion-icon name="folder-outline"></ion-icon>
+ */
+
+export interface Props {
+  icon: string;
+  class?: string;
+  size?: string;
+}
+
+const { icon, class: className = '', size = '1em' } = Astro.props;
+
+// 解析图标格式
+function parseIcon(iconStr: string) {
+  if (!iconStr) return { type: 'none', value: '' };
+
+  // 检测是否有前缀
+  const hasPrefix = /^[a-z-]+:/i.test(iconStr);
+
+  if (!hasPrefix) {
+    // 检测是否为 emoji（包含非 ASCII 字符）
+    const isEmoji = /[\u{1F300}-\u{1F9FF}]|[\u{2600}-\u{26FF}]|[\u{2700}-\u{27BF}]|[\u{1F600}-\u{1F64F}]|[\u{1F680}-\u{1F6FF}]|[\u{1F1E0}-\u{1F1FF}]/u.test(iconStr);
+    if (isEmoji) {
+      return { type: 'emoji', value: iconStr };
+    }
+
+    // 没有前缀且不是 emoji，默认当作 Font Awesome solid 图标
+    return { type: 'fa', style: 'solid', value: iconStr };
+  }
+
+  const [prefix, ...rest] = iconStr.split(':');
+  const value = rest.join(':');
+
+  switch (prefix.toLowerCase()) {
+    // Font Awesome
+    case 'fa':
+      return { type: 'fa', style: 'solid', value };
+    case 'fa-solid':
+    case 'fas':
+      return { type: 'fa', style: 'solid', value };
+    case 'fa-regular':
+    case 'far':
+      return { type: 'fa', style: 'regular', value };
+    case 'fa-brands':
+    case 'fab':
+      return { type: 'fa', style: 'brands', value };
+    case 'fa-light':
+    case 'fal':
+      return { type: 'fa', style: 'light', value };
+    case 'fa-thin':
+    case 'fat':
+      return { type: 'fa', style: 'thin', value };
+    case 'fa-duotone':
+    case 'fad':
+      return { type: 'fa', style: 'duotone', value };
+
+    // Material Icons
+    case 'mi':
+    case 'material':
+      return { type: 'material', style: 'filled', value };
+    case 'mi-outlined':
+    case 'material-outlined':
+      return { type: 'material', style: 'outlined', value };
+    case 'mi-round':
+    case 'material-round':
+      return { type: 'material', style: 'round', value };
+
+    // Bootstrap Icons
+    case 'bi':
+    case 'bootstrap':
+      return { type: 'bootstrap', value };
+
+    // Remix Icon
+    case 'ri':
+    case 'remix':
+      return { type: 'remix', value };
+
+    // Ionicons
+    case 'ion':
+    case 'ionicon':
+      return { type: 'ionicon', value };
+
+    default:
+      // 未知前缀，当作 emoji 处理
+      return { type: 'emoji', value: iconStr };
+  }
+}
+
+const parsed = parseIcon(icon);
+---
+
+{parsed.type === 'emoji' && (
+  <span class:list={['icon-emoji', className]} style={`font-size: ${size};`}>{parsed.value}</span>
+)}
+
+{parsed.type === 'fa' && (
+  <i
+    class:list={[`fa-${parsed.style}`, `fa-${parsed.value}`, className]}
+    style={`font-size: ${size};`}
+  ></i>
+)}
+
+{parsed.type === 'material' && parsed.style === 'filled' && (
+  <span
+    class:list={['material-icons', className]}
+    style={`font-size: ${size};`}
+  >{parsed.value}</span>
+)}
+
+{parsed.type === 'material' && parsed.style === 'outlined' && (
+  <span
+    class:list={['material-icons-outlined', className]}
+    style={`font-size: ${size};`}
+  >{parsed.value}</span>
+)}
+
+{parsed.type === 'material' && parsed.style === 'round' && (
+  <span
+    class:list={['material-icons-round', className]}
+    style={`font-size: ${size};`}
+  >{parsed.value}</span>
+)}
+
+{parsed.type === 'bootstrap' && (
+  <i
+    class:list={['bi', `bi-${parsed.value}`, className]}
+    style={`font-size: ${size};`}
+  ></i>
+)}
+
+{parsed.type === 'remix' && (
+  <i
+    class:list={[`ri-${parsed.value}`, className]}
+    style={`font-size: ${size};`}
+  ></i>
+)}
+
+{parsed.type === 'ionicon' && (
+  <ion-icon
+    name={parsed.value}
+    class={className}
+    style={`font-size: ${size};`}
+  ></ion-icon>
+)}
+
+<style>
+  .icon-emoji {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    line-height: 1;
+  }
+
+  /* 统一图标垂直对齐 */
+  i, span.material-icons, span.material-icons-outlined, span.material-icons-round, ion-icon {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    vertical-align: middle;
+    line-height: 1;
+  }
+</style>

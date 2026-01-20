@@ -1,0 +1,27 @@
+---
+/**
+ * 内容卡片组件
+ * 用于展示带标题的 Markdown 内容
+ *
+ * 使用方式:
+ * <ContentCard title="关于这个博客">
+ *   这里是 **Markdown** 内容...
+ * </ContentCard>
+ */
+
+export interface Props {
+  title: string;
+  class?: string;
+}
+
+const { title, class: className = '' } = Astro.props;
+---
+
+<div class={`card ${className}`}>
+  <h2 class="text-2xl font-bold text-slate-900 dark:text-slate-100 mb-6">
+    {title}
+  </h2>
+  <div class="prose-custom">
+    <slot />
+  </div>
+</div>

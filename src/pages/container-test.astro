@@ -1,0 +1,79 @@
+---
+import BaseLayout from '@jet-w/astro-blog/layouts/BaseLayout.astro';
+---
+
+<BaseLayout title="容器测试页面">
+  <div class="container mx-auto px-4 py-8">
+    <div class="max-w-4xl mx-auto">
+      <h1 class="text-3xl font-bold mb-8">容器效果测试</h1>
+
+      <div class="prose prose-slate dark:prose-invert max-w-none prose-lg">
+
+        <h1>测试各种容器类型</h1>
+
+        <div class="container-tip custom-container" data-container-type="tip">
+          <div class="container-title">💡 提示</div>
+          <div class="container-content">
+            <p>这是一个提示容器，用于显示有用的提示信息。</p>
+            <ul>
+              <li>支持列表</li>
+              <li>支持多行内容</li>
+            </ul>
+          </div>
+        </div>
+
+        <div class="container-note custom-container" data-container-type="note">
+          <div class="container-title">📝 注意</div>
+          <div class="container-content">
+            <p>这是一个注意容器，用于显示需要注意的信息。可以包含<strong>粗体文字</strong>和<em>斜体文字</em>。</p>
+          </div>
+        </div>
+
+        <div class="container-warning custom-container" data-container-type="warning">
+          <div class="container-title">⚠️ 警告</div>
+          <div class="container-content">
+            <p>这是一个警告容器，用于显示警告信息。</p>
+          </div>
+        </div>
+
+        <div class="container-danger custom-container" data-container-type="danger">
+          <div class="container-title">🚨 危险</div>
+          <div class="container-content">
+            <p>这是一个危险容器，用于显示危险信息。</p>
+          </div>
+        </div>
+
+        <div class="container-info custom-container" data-container-type="info">
+          <div class="container-title">ℹ️ 信息</div>
+          <div class="container-content">
+            <p>这是一个信息容器，用于显示一般信息。</p>
+          </div>
+        </div>
+
+        <div class="container-details custom-container" data-container-type="details">
+          <div class="container-title">📋 详情</div>
+          <div class="container-content">
+            <p>这是一个详情容器，用于显示详细信息。</p>
+          </div>
+        </div>
+
+        <h2>自定义标题测试</h2>
+
+        <div class="container-tip custom-container" data-container-type="tip">
+          <div class="container-title">自定义提示标题</div>
+          <div class="container-content">
+            <p>这个容器有自定义的标题。</p>
+          </div>
+        </div>
+
+        <div class="container-note custom-container" data-container-type="note">
+          <div class="container-title">我的自定义注意事项</div>
+          <div class="container-content">
+            <p>这个容器也有自定义的标题。</p>
+          </div>
+        </div>
+
+      </div>
+    </div>
+  </div>
+</BaseLayout>

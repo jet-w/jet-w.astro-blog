@@ -1,0 +1,81 @@
+---
+/**
+ * 首页快速导航组件
+ */
+import NavigationTabs from '../../components/blog/NavigationTabs.vue';
+import { getCollection } from 'astro:content';
+
+const allPosts = await getCollection('posts');
+const publishedPosts = allPosts
+  .filter(post => !post.data.draft)
+  .sort((a, b) => (b.data.pubDate?.getTime() ?? 0) - (a.data.pubDate?.getTime() ?? 0));
+
+const posts = publishedPosts.map(post => ({
+  slug: post.id.toLowerCase(),
+  title: post.data.title,
+  pubDate: post.data.pubDate,
+  tags: post.data.tags,
+  categories: post.data.categories,
+}));
+
+// 构建标签数据
+const tagCounts: Record<string, number> = {};
+posts.forEach(post => {
+  (post.tags || []).forEach(tag => {
+    tagCounts[tag] = (tagCounts[tag] || 0) + 1;
+  });
+});
+const tagsData = Object.entries(tagCounts)
+  .map(([name, count]) => ({ name, count }))
+  .sort((a, b) => b.count - a.count);
+
+// 构建分类数据
+const categoryCounts: Record<string, number> = {};
+posts.forEach(post => {
+  (post.categories || []).forEach(category => {
+    categoryCounts[category] = (categoryCounts[category] || 0) + 1;
+  });
+});
+const categoriesData = Object.entries(categoryCounts)
+  .map(([name, count]) => ({ name, count }))
+  .sort((a, b) => b.count - a.count);
+
+// 构建归档数据
+const archiveCounts: Record<string, number> = {};
+posts.forEach(post => {
+  if (post.pubDate) {
+    const year = post.pubDate.getFullYear().toString();
+    const month = (post.pubDate.getMonth() + 1).toString().padStart(2, '0');
+    const key = `${year}-${month}`;
+    archiveCounts[key] = (archiveCounts[key] || 0) + 1;
+  }
+});
+const archivesData = Object.entries(archiveCounts)
+  .map(([key, count]) => {
+    const [year, month] = key.split('-');
+    return { year, month, key, count };
+  })
+  .sort((a, b) => b.key.localeCompare(a.key));
+
+// 构建时间轴数据（最近10篇）
+const timelineData = posts.slice(0, 10).map(post => ({
+  slug: post.slug,
+  title: post.title,
+  pubDate: post.pubDate?.toISOString() || ''
+}));
+---
+
+<section class="mb-16">
+  <div class="flex items-center justify-between mb-8">
+    <h2 class="text-2xl font-bold text-slate-900 dark:text-slate-100">
+      快速导航
+    </h2>
+  </div>
+  <NavigationTabs
+    client:load
+    tags={tagsData}
+    archives={archivesData}
+    categories={categoriesData}
+    timeline={timelineData}
+  />
+</section>

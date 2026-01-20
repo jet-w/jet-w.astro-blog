@@ -1,0 +1,175 @@
+---
+export interface Props {
+  currentPost: {
+    slug: string;
+    title: string;
+    tags?: string[];
+    categories?: string[];
+  };
+}
+
+const { currentPost } = Astro.props;
+
+// 模拟获取相关文章
+const allPosts = [
+  {
+    slug: 'astro-vs-nextjs',
+    title: 'Astro vs Next.js：静态站点生成器的对比',
+    description: '深入比较Astro和Next.js在性能、开发体验和生态系统方面的差异。',
+    pubDate: new Date('2025-01-07'),
+    tags: ['Astro', 'Next.js', 'SSG'],
+    categories: ['技术比较'],
+    readingTime: 8
+  },
+  {
+    slug: 'tailwind-best-practices',
+    title: 'Tailwind CSS最佳实践指南',
+    description: '总结使用Tailwind CSS开发时的最佳实践和常见问题解决方案。',
+    pubDate: new Date('2025-01-06'),
+    tags: ['Tailwind CSS', 'CSS', '最佳实践'],
+    categories: ['前端开发'],
+    readingTime: 6
+  },
+  {
+    slug: 'typescript-tips',
+    title: 'TypeScript高级技巧与实战',
+    description: '分享TypeScript在实际项目中的高级用法和技巧。',
+    pubDate: new Date('2025-01-05'),
+    tags: ['TypeScript', 'JavaScript'],
+    categories: ['编程语言'],
+    readingTime: 10
+  }
+];
+
+// 计算相关度分数
+function calculateRelevance(post: typeof allPosts[0]) {
+  let score = 0;
+
+  // 标签匹配
+  if (currentPost.tags && post.tags) {
+    const commonTags = currentPost.tags.filter(tag =>
+      post.tags!.includes(tag)
+    );
+    score += commonTags.length * 3;
+  }
+
+  // 分类匹配
+  if (currentPost.categories && post.categories) {
+    const commonCategories = currentPost.categories.filter(category =>
+      post.categories!.includes(category)
+    );
+    score += commonCategories.length * 2;
+  }
+
+  return score;
+}
+
+// 获取相关文章（排除当前文章）
+const relatedPosts = allPosts
+  .filter(post => post.slug !== currentPost.slug)
+  .map(post => ({
+    ...post,
+    relevance: calculateRelevance(post)
+  }))
+  .sort((a, b) => b.relevance - a.relevance)
+  .slice(0, 3);
+
+const formattedDate = (date: Date) => new Intl.DateTimeFormat('zh-CN', {
+  month: 'short',
+  day: 'numeric'
+}).format(date);
+---
+
+{relatedPosts.length > 0 && (
+  <section class="mt-16">
+    <h2 class="text-2xl font-bold text-slate-900 dark:text-slate-100 mb-8">
+      相关文章
+    </h2>
+
+    <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+      {relatedPosts.map((post) => (
+        <article class="group">
+          <a
+            href={`/posts/${post.slug}`}
+            class="card hover:shadow-lg transform hover:-translate-y-1 transition-all duration-300 block h-full"
+          >
+            <div class="flex flex-col h-full">
+              <!-- 元信息 -->
+              <div class="flex items-center justify-between text-xs text-slate-500 dark:text-slate-400 mb-3">
+                <time datetime={post.pubDate.toISOString()}>
+                  {formattedDate(post.pubDate)}
+                </time>
+                {post.readingTime && (
+                  <span>{post.readingTime}分钟</span>
+                )}
+              </div>
+
+              <!-- 标题 -->
+              <h3 class="text-lg font-semibold text-slate-900 dark:text-slate-100 group-hover:text-primary-500 transition-colors mb-3 line-clamp-2">
+                {post.title}
+              </h3>
+
+              <!-- 描述 -->
+              <p class="text-sm text-slate-600 dark:text-slate-400 mb-4 line-clamp-3 flex-1">
+                {post.description}
+              </p>
+
+              <!-- 标签 -->
+              {post.tags && post.tags.length > 0 && (
+                <div class="flex flex-wrap gap-1 mb-3">
+                  {post.tags.slice(0, 2).map((tag) => (
+                    <span class="text-xs px-2 py-1 bg-primary-100 dark:bg-primary-900/30 text-primary-700 dark:text-primary-300 rounded-full">
+                      {tag}
+                    </span>
+                  ))}
+                  {post.tags.length > 2 && (
+                    <span class="text-xs px-2 py-1 bg-slate-100 dark:bg-slate-700 text-slate-600 dark:text-slate-400 rounded-full">
+                      +{post.tags.length - 2}
+                    </span>
+                  )}
+                </div>
+              )}
+
+              <!-- 阅读链接 -->
+              <div class="flex items-center text-primary-500 group-hover:text-primary-600 transition-colors text-sm font-medium">
+                <span>阅读更多</span>
+                <svg class="w-4 h-4 ml-1 group-hover:translate-x-1 transition-transform" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7" />
+                </svg>
+              </div>
+            </div>
+          </a>
+        </article>
+      ))}
+    </div>
+
+    <!-- 查看更多按钮 -->
+    <div class="text-center mt-8">
+      <a
+        href="/posts"
+        class="btn-secondary inline-flex items-center space-x-2"
+      >
+        <span>查看更多文章</span>
+        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7" />
+        </svg>
+      </a>
+    </div>
+  </section>
+)}
+
+<style>
+  .line-clamp-2 {
+    display: -webkit-box;
+    -webkit-line-clamp: 2;
+    -webkit-box-orient: vertical;
+    overflow: hidden;
+  }
+
+  .line-clamp-3 {
+    display: -webkit-box;
+    -webkit-line-clamp: 3;
+    -webkit-box-orient: vertical;
+    overflow: hidden;
+  }
+</style>

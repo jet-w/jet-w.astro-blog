@@ -1,0 +1,91 @@
+---
+export interface Props {
+  tags: Array<{
+    name: string;
+    count: number;
+    slug: string;
+  }>;
+  maxSize?: number;
+  minSize?: number;
+}
+
+const { tags, maxSize = 2.5, minSize = 0.8 } = Astro.props;
+
+// 计算字体大小
+const maxCount = Math.max(...tags.map(tag => tag.count));
+const minCount = Math.min(...tags.map(tag => tag.count));
+
+const getFontSize = (count: number) => {
+  if (maxCount === minCount) return (maxSize + minSize) / 2;
+  const ratio = (count - minCount) / (maxCount - minCount);
+  return minSize + ratio * (maxSize - minSize);
+};
+
+// 生成随机颜色类
+const getColorClass = (index: number) => {
+  const colors = [
+    'text-primary-500 hover:text-primary-600',
+    'text-secondary-500 hover:text-secondary-600',
+    'text-accent-500 hover:text-accent-600',
+    'text-blue-500 hover:text-blue-600',
+    'text-green-500 hover:text-green-600',
+    'text-purple-500 hover:text-purple-600',
+    'text-pink-500 hover:text-pink-600',
+    'text-indigo-500 hover:text-indigo-600',
+    'text-red-500 hover:text-red-600',
+    'text-yellow-500 hover:text-yellow-600',
+    'text-teal-500 hover:text-teal-600',
+    'text-orange-500 hover:text-orange-600'
+  ];
+  return colors[index % colors.length];
+};
+
+// 随机打乱标签顺序以增加视觉趣味性
+const shuffledTags = [...tags].sort(() => Math.random() - 0.5);
+---
+
+<div class="tag-cloud p-8 bg-slate-50 dark:bg-slate-800 rounded-xl">
+  <div class="flex flex-wrap items-center justify-center gap-3 leading-relaxed">
+    {shuffledTags.map((tag, index) => (
+      <a
+        href={`/tags/${tag.slug}`}
+        class={`inline-block font-medium transition-all duration-300 hover:scale-110 ${getColorClass(index)}`}
+        style={`font-size: ${getFontSize(tag.count)}rem`}
+        title={`${tag.name} (${tag.count} 篇文章)`}
+      >
+        {tag.name}
+      </a>
+    ))}
+  </div>
+
+  <!-- 图例 -->
+  <div class="mt-6 pt-4 border-t border-slate-200 dark:border-slate-700">
+    <div class="flex items-center justify-center space-x-8 text-sm text-slate-600 dark:text-slate-400">
+      <div class="flex items-center space-x-2">
+        <span class="text-xs">文字大小表示文章数量</span>
+      </div>
+      <div class="flex items-center space-x-2">
+        <span class="text-xs">共 {tags.length} 个标签</span>
+      </div>
+      <div class="flex items-center space-x-2">
+        <span class="text-xs">最多 {maxCount} 篇</span>
+      </div>
+    </div>
+  </div>
+</div>
+
+<style>
+  .tag-cloud {
+    background:
+      radial-gradient(circle at 20% 80%, rgba(59, 130, 246, 0.1) 0%, transparent 50%),
+      radial-gradient(circle at 80% 20%, rgba(139, 92, 246, 0.1) 0%, transparent 50%),
+      radial-gradient(circle at 40% 40%, rgba(99, 102, 241, 0.1) 0%, transparent 50%);
+  }
+
+  .dark .tag-cloud {
+    background:
+      radial-gradient(circle at 20% 80%, rgba(59, 130, 246, 0.05) 0%, transparent 50%),
+      radial-gradient(circle at 80% 20%, rgba(139, 92, 246, 0.05) 0%, transparent 50%),
+      radial-gradient(circle at 40% 40%, rgba(99, 102, 241, 0.05) 0%, transparent 50%);
+  }
+</style>

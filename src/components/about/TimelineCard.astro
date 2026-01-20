@@ -1,0 +1,52 @@
+---
+/**
+ * 时间线卡片组件
+ * 用于展示发展历程、里程碑等
+ *
+ * 使用方式:
+ * <TimelineCard title="发展历程" events={[
+ *   { year: '2025', title: '博客创建', description: '...', color: 'primary' }
+ * ]} />
+ */
+
+export interface TimelineEvent {
+  year: string;
+  title: string;
+  description: string;
+  color?: 'primary' | 'secondary' | 'accent';
+}
+
+export interface Props {
+  title: string;
+  events: TimelineEvent[];
+}
+
+const { title, events } = Astro.props;
+
+const bgColorMap = {
+  primary: 'bg-primary-500',
+  secondary: 'bg-secondary-500',
+  accent: 'bg-accent-500'
+};
+---
+
+<div class="card">
+  <h2 class="text-2xl font-bold text-slate-900 dark:text-slate-100 mb-6">
+    {title}
+  </h2>
+  <div class="space-y-8">
+    {events.map((event) => (
+      <div class="flex items-start space-x-4">
+        <div class={`flex-shrink-0 w-12 h-12 ${bgColorMap[event.color || 'primary']} rounded-full flex items-center justify-center text-white font-bold`}>
+          {event.year}
+        </div>
+        <div>
+          <h3 class="font-semibold text-slate-900 dark:text-slate-100">{event.title}</h3>
+          <p class="text-slate-600 dark:text-slate-400 text-sm">
+            {event.description}
+          </p>
+        </div>
+      </div>
+    ))}
+  </div>
+</div>

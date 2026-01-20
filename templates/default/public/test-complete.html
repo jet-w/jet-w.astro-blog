@@ -1,0 +1,43 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Complete Feature Test</title>
+    <script>
+        function checkFeatures() {
+            const results = [];
+
+            // 检查内容是否显示
+            const content = document.querySelector('.prose');
+            results.push(`内容显示: ${content ? '✅' : '❌'}`);
+
+            // 检查容器是否渲染
+            const containers = document.querySelectorAll('.custom-container');
+            results.push(`容器语法: ${containers.length > 0 ? '✅' : '❌'} (${containers.length}个)`);
+
+            // 检查mermaid代码块
+            const mermaidCode = document.querySelectorAll('pre code[data-language="mermaid"]');
+            results.push(`Mermaid代码块: ${mermaidCode.length > 0 ? '✅' : '❌'} (${mermaidCode.length}个)`);
+
+            // 检查mermaid渲染容器（JavaScript渲染后出现）
+            setTimeout(() => {
+                const mermaidContainers = document.querySelectorAll('.mermaid-container');
+                results.push(`Mermaid渲染: ${mermaidContainers.length > 0 ? '✅' : '❌'} (${mermaidContainers.length}个)`);
+
+                document.getElementById('results').innerHTML = results.join('<br>');
+            }, 3000); // 给JavaScript时间渲染
+
+            document.getElementById('results').innerHTML = results.join('<br>') + '<br>等待Mermaid渲染...';
+        }
+
+        window.onload = checkFeatures;
+    </script>
+</head>
+<body>
+    <h1>功能测试页面</h1>
+    <div id="results">检查中...</div>
+    <br>
+    <iframe src="/posts/astro-001" width="100%" height="600px" style="border: 1px solid #ccc;"></iframe>
+</body>
+</html>

@@ -1,0 +1,541 @@
+---
+import PageLayout from '@jet-w/astro-blog/layouts/PageLayout.astro';
+import PostCard from '@jet-w/astro-blog/components/blog/PostCard.astro';
+import Pagination from '@jet-w/astro-blog/components/ui/Pagination.astro';
+import NavigationTabs from '@jet-w/astro-blog/components/blog/NavigationTabs.vue';
+import { getCollection } from 'astro:content';
+
+// 从新的内容目录获取文章数据
+const allPostsCollection = await getCollection('posts');
+const publishedPosts = allPostsCollection
+  .filter(post => !post.data.draft)
+  .sort((a, b) => (b.data.pubDate?.getTime() ?? 0) - (a.data.pubDate?.getTime() ?? 0));
+
+const allPosts = publishedPosts.map(post => ({
+  slug: post.id.toLowerCase(),
+  title: post.data.title,
+  description: post.data.description,
+  pubDate: post.data.pubDate,
+  tags: post.data.tags,
+  categories: post.data.categories,
+  author: post.data.author,
+  readingTime: 5,
+  image: post.data.image
+}));
+
+// 构建标签数据
+const tagCounts: Record<string, number> = {};
+allPosts.forEach(post => {
+  (post.tags || []).forEach(tag => {
+    tagCounts[tag] = (tagCounts[tag] || 0) + 1;
+  });
+});
+const tagsData = Object.entries(tagCounts)
+  .map(([name, count]) => ({ name, count }))
+  .sort((a, b) => b.count - a.count);
+
+// 构建分类数据
+const categoryCounts: Record<string, number> = {};
+allPosts.forEach(post => {
+  (post.categories || []).forEach(category => {
+    categoryCounts[category] = (categoryCounts[category] || 0) + 1;
+  });
+});
+const categoriesData = Object.entries(categoryCounts)
+  .map(([name, count]) => ({ name, count }))
+  .sort((a, b) => b.count - a.count);
+
+// 构建归档数据
+const archiveCounts: Record<string, number> = {};
+allPosts.forEach(post => {
+  if (post.pubDate) {
+    const year = post.pubDate.getFullYear().toString();
+    const month = (post.pubDate.getMonth() + 1).toString().padStart(2, '0');
+    const key = `${year}-${month}`;
+    archiveCounts[key] = (archiveCounts[key] || 0) + 1;
+  }
+});
+const archivesData = Object.entries(archiveCounts)
+  .map(([key, count]) => {
+    const [year, month] = key.split('-');
+    return { year, month, key, count };
+  })
+  .sort((a, b) => b.key.localeCompare(a.key));
+
+// 构建时间轴数据（最近10篇）
+const timelineData = allPosts.slice(0, 10).map(post => ({
+  slug: post.slug,
+  title: post.title,
+  pubDate: post.pubDate?.toISOString() || ''
+}));
+
+// 构建层级结构（用于列表模式）
+interface TreeNode {
+  name: string;
+  slug?: string;
+  title?: string;
+  description?: string;
+  pubDate?: Date;
+  children: TreeNode[];
+  isFolder: boolean;
+  isReadme?: boolean;
+}
+
+const buildTree = () => {
+  const tree: TreeNode[] = [];
+  const folderTitles: Record<string, string> = {};
+
+  // 收集文件夹标题（从 README）
+  publishedPosts.forEach(post => {
+    const pathParts = post.id.split('/');
+    const fileName = pathParts[pathParts.length - 1].toLowerCase();
+    if (fileName === 'readme' || fileName === 'readme.md') {
+      const folderPath = pathParts.slice(0, -1).join('/');
+      if (folderPath && post.data.title) {
+        folderTitles[folderPath] = post.data.title;
+      }
+    }
+  });
+
+  // 构建树
+  publishedPosts.forEach(post => {
+    const pathParts = post.id.split('/');
+    let currentLevel = tree;
+    let currentPath = '';
+
+    pathParts.forEach((part, index) => {
+      const isLast = index === pathParts.length - 1;
+      currentPath = currentPath ? `${currentPath}/${part}` : part;
+      const existing = currentLevel.find(n => n.name === part);
+      const isReadme = isLast && (part.toLowerCase() === 'readme' || part.toLowerCase() === 'readme.md');
+
+      if (existing) {
+        if (isLast) {
+          existing.slug = post.id;
+          existing.title = post.data.title;
+          existing.description = post.data.description;
+          existing.pubDate = post.data.pubDate;
+          existing.isReadme = isReadme;
+        }
+        currentLevel = existing.children;
+      } else {
+        const folderPath = pathParts.slice(0, index + 1).join('/');
+        const newNode: TreeNode = {
+          name: part,
+          slug: isLast ? post.id : undefined,
+          title: isLast ? post.data.title : folderTitles[folderPath],
+          description: isLast ? post.data.description : undefined,
+          pubDate: isLast ? post.data.pubDate : undefined,
+          children: [],
+          isFolder: !isLast,
+          isReadme: isReadme
+        };
+        currentLevel.push(newNode);
+        currentLevel = newNode.children;
+      }
+    });
+  });
+
+  // 排序并过滤 README
+  const sortTree = (nodes: TreeNode[]): TreeNode[] => {
+    return nodes
+      .filter(node => !node.isReadme)
+      .sort((a, b) => {
+        if (a.isFolder && !b.isFolder) return -1;
+        if (!a.isFolder && b.isFolder) return 1;
+        return a.name.localeCompare(b.name, 'zh-CN', { numeric: true });
+      })
+      .map(node => ({
+        ...node,
+        children: sortTree(node.children)
+      }));
+  };
+
+  return sortTree(tree);
+};
+
+const postTree = buildTree();
+
+// 分页逻辑
+const currentPage = 1;
+const postsPerPage = 10;
+const totalPosts = allPosts.length;
+const totalPages = Math.ceil(totalPosts / postsPerPage);
+const startIndex = (currentPage - 1) * postsPerPage;
+const endIndex = startIndex + postsPerPage;
+const posts = allPosts.slice(startIndex, endIndex);
+
+// 获取所有标签和分类用于筛选
+const allTags = [...new Set(allPosts.flatMap(post => post.tags || []))];
+const allCategories = [...new Set(allPosts.flatMap(post => post.categories || []))];
+
+// 格式化日期
+const formatDate = (date?: Date) => {
+  if (!date) return '';
+  return new Intl.DateTimeFormat('zh-CN', {
+    year: 'numeric',
+    month: '2-digit',
+    day: '2-digit'
+  }).format(date);
+};
+---
+
+<PageLayout
+  title="文章列表"
+  description="浏览所有技术文章和分享内容"
+  showSidebar={true}
+>
+  <!-- 页面头部 -->
+  <div class="mb-12">
+    <div class="text-center">
+      <h1 class="text-4xl font-bold text-slate-900 dark:text-slate-100 mb-4">
+        文章列表
+      </h1>
+      <p class="text-xl text-slate-600 dark:text-slate-400 mb-8">
+        分享技术思考和学习心得
+      </p>
+
+      <!-- 统计信息 -->
+      <div class="inline-flex items-center space-x-6 text-sm text-slate-500 dark:text-slate-400 bg-slate-50 dark:bg-slate-800 px-6 py-3 rounded-lg">
+        <span>共 {totalPosts} 篇文章</span>
+        <span>•</span>
+        <span>{allTags.length} 个标签</span>
+        <span>•</span>
+        <span>{allCategories.length} 个分类</span>
+      </div>
+    </div>
+  </div>
+
+  <!-- 导航标签卡片
+  <div class="mb-8">
+    <NavigationTabs
+      client:load
+      tags={tagsData}
+      archives={archivesData}
+      categories={categoriesData}
+      timeline={timelineData}
+    />
+  </div> -->
+
+  <!-- 筛选器 -->
+  <div class="mb-8 p-6 bg-white dark:bg-slate-800 rounded-xl border border-slate-200 dark:border-slate-700">
+    <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+      <!-- 按标签筛选 -->
+      <div>
+        <h3 class="text-sm font-semibold text-slate-900 dark:text-slate-100 mb-3">
+          按标签筛选
+        </h3>
+        <div class="flex flex-wrap gap-2">
+          <a href="/tags" class="px-3 py-1 text-xs rounded-full bg-primary-100 dark:bg-primary-900/30 text-primary-700 dark:text-primary-300 hover:bg-primary-200 dark:hover:bg-primary-900/50 transition-colors">
+            全部标签
+          </a>
+          {allTags.slice(0, 10).map((tag) => (
+            <a href={`/tags/${tag.toLowerCase().replace(/\s+/g, '-')}`} class="px-3 py-1 text-xs rounded-full bg-slate-100 dark:bg-slate-700 text-slate-700 dark:text-slate-300 hover:bg-slate-200 dark:hover:bg-slate-600 transition-colors">
+              {tag}
+            </a>
+          ))}
+          {allTags.length > 10 && (
+            <a href="/tags" class="px-3 py-1 text-xs rounded-full bg-slate-100 dark:bg-slate-700 text-slate-500 dark:text-slate-400 hover:bg-slate-200 dark:hover:bg-slate-600 transition-colors">
+              +{allTags.length - 10} 更多
+            </a>
+          )}
+        </div>
+      </div>
+
+      <!-- 按分类筛选 -->
+      <div>
+        <h3 class="text-sm font-semibold text-slate-900 dark:text-slate-100 mb-3">
+          按分类筛选
+        </h3>
+        <div class="flex flex-wrap gap-2">
+          <a href="/categories" class="px-3 py-1 text-xs rounded-full bg-primary-100 dark:bg-primary-900/30 text-primary-700 dark:text-primary-300 hover:bg-primary-200 dark:hover:bg-primary-900/50 transition-colors">
+            全部分类
+          </a>
+          {allCategories.slice(0, 8).map((category) => (
+            <a href={`/categories/${category.toLowerCase().replace(/\s+/g, '-')}`} class="px-3 py-1 text-xs rounded-full bg-slate-100 dark:bg-slate-700 text-slate-700 dark:text-slate-300 hover:bg-slate-200 dark:hover:bg-slate-600 transition-colors">
+              {category}
+            </a>
+          ))}
+          {allCategories.length > 8 && (
+            <a href="/categories" class="px-3 py-1 text-xs rounded-full bg-slate-100 dark:bg-slate-700 text-slate-500 dark:text-slate-400 hover:bg-slate-200 dark:hover:bg-slate-600 transition-colors">
+              +{allCategories.length - 8} 更多
+            </a>
+          )}
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- 文章列表区域 -->
+  <div class="mb-12">
+    <!-- 视图切换按钮 -->
+    <div class="flex items-center justify-end mb-4">
+      <div class="flex items-center gap-2 bg-slate-100 dark:bg-slate-700 p-1 rounded-lg">
+        <button
+          class="view-toggle-btn active px-3 py-1.5 text-sm rounded-md transition-colors"
+          data-view="card"
+          title="卡片模式"
+        >
+          <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2H6a2 2 0 01-2-2V6zM14 6a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2h-2a2 2 0 01-2-2V6zM4 16a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2H6a2 2 0 01-2-2v-2zM14 16a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2h-2a2 2 0 01-2-2v-2z" />
+          </svg>
+        </button>
+        <button
+          class="view-toggle-btn px-3 py-1.5 text-sm rounded-md transition-colors"
+          data-view="list"
+          title="列表模式"
+        >
+          <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6h16M4 10h16M4 14h16M4 18h16" />
+          </svg>
+        </button>
+      </div>
+    </div>
+
+    <!-- 卡片模式 -->
+    <div id="card-view" class="view-container">
+    {posts.length > 0 ? (
+      <div class="flex flex-wrap gap-6 mb-12">
+        {posts.map((post) => (
+          <div class="flex-shrink-0">
+            <PostCard post={post} layout="horizontal" />
+          </div>
+        ))}
+      </div>
+    ) : (
+      <div class="text-center py-16">
+        <div class="text-6xl mb-4">📝</div>
+        <h3 class="text-xl font-semibold text-slate-900 dark:text-slate-100 mb-2">
+          暂无文章
+        </h3>
+        <p class="text-slate-600 dark:text-slate-400">
+          目前还没有发布任何文章，请稍后再来查看。
+        </p>
+      </div>
+    )}
+  </div>
+
+  <!-- 列表模式 -->
+  <div id="list-view" class="view-container hidden">
+    {postTree.length > 0 ? (
+      <div class="bg-white dark:bg-slate-800 rounded-xl border border-slate-200 dark:border-slate-700 overflow-hidden mb-12">
+        <div class="post-tree">
+          {postTree.map((node) => (
+            <div class="tree-node">
+              {node.isFolder ? (
+                <div class="folder-node">
+                  <button class="folder-toggle w-full flex items-center gap-3 px-4 py-3 hover:bg-slate-50 dark:hover:bg-slate-700/50 transition-colors border-b border-slate-100 dark:border-slate-700">
+                    <svg class="folder-chevron w-4 h-4 text-slate-400 transition-transform duration-200" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7" />
+                    </svg>
+                    <svg class="w-5 h-5 text-amber-500" fill="currentColor" viewBox="0 0 24 24">
+                      <path d="M10 4H4a2 2 0 00-2 2v12a2 2 0 002 2h16a2 2 0 002-2V8a2 2 0 00-2-2h-8l-2-2z" />
+                    </svg>
+                    <span class="font-medium text-slate-900 dark:text-slate-100">{node.title || node.name}</span>
+                    <span class="text-xs text-slate-400 ml-auto">{node.children.length} 篇</span>
+                  </button>
+                  <div class="folder-children hidden">
+                    {node.children.map((child) => (
+                      <div class="tree-node">
+                        {child.isFolder ? (
+                          <div class="folder-node ml-6">
+                            <button class="folder-toggle w-full flex items-center gap-3 px-4 py-3 hover:bg-slate-50 dark:hover:bg-slate-700/50 transition-colors border-b border-slate-100 dark:border-slate-700">
+                              <svg class="folder-chevron w-4 h-4 text-slate-400 transition-transform duration-200" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7" />
+                              </svg>
+                              <svg class="w-5 h-5 text-amber-500" fill="currentColor" viewBox="0 0 24 24">
+                                <path d="M10 4H4a2 2 0 00-2 2v12a2 2 0 002 2h16a2 2 0 002-2V8a2 2 0 00-2-2h-8l-2-2z" />
+                              </svg>
+                              <span class="font-medium text-slate-900 dark:text-slate-100">{child.title || child.name}</span>
+                              <span class="text-xs text-slate-400 ml-auto">{child.children.length} 篇</span>
+                            </button>
+                            <div class="folder-children hidden">
+                              {child.children.map((grandChild) => (
+                                <a
+                                  href={`/posts/${grandChild.slug}`}
+                                  class="ml-12 flex items-start gap-4 px-4 py-3 hover:bg-slate-50 dark:hover:bg-slate-700/50 transition-colors border-b border-slate-100 dark:border-slate-700 group"
+                                >
+                                  <svg class="w-4 h-4 text-slate-400 mt-1 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+                                  </svg>
+                                  <div class="flex-1 min-w-0">
+                                    <h4 class="font-medium text-slate-900 dark:text-slate-100 group-hover:text-primary-500 transition-colors">{grandChild.title || grandChild.name}</h4>
+                                    {grandChild.description && (
+                                      <p class="text-sm text-slate-500 dark:text-slate-400 mt-1 line-clamp-1">{grandChild.description}</p>
+                                    )}
+                                  </div>
+                                  {grandChild.pubDate && (
+                                    <time class="text-xs text-slate-400 flex-shrink-0">{formatDate(grandChild.pubDate)}</time>
+                                  )}
+                                </a>
+                              ))}
+                            </div>
+                          </div>
+                        ) : (
+                          <a
+                            href={`/posts/${child.slug}`}
+                            class="ml-6 flex items-start gap-4 px-4 py-3 hover:bg-slate-50 dark:hover:bg-slate-700/50 transition-colors border-b border-slate-100 dark:border-slate-700 group"
+                          >
+                            <svg class="w-4 h-4 text-slate-400 mt-1 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+                            </svg>
+                            <div class="flex-1 min-w-0">
+                              <h4 class="font-medium text-slate-900 dark:text-slate-100 group-hover:text-primary-500 transition-colors">{child.title || child.name}</h4>
+                              {child.description && (
+                                <p class="text-sm text-slate-500 dark:text-slate-400 mt-1 line-clamp-1">{child.description}</p>
+                              )}
+                            </div>
+                            {child.pubDate && (
+                              <time class="text-xs text-slate-400 flex-shrink-0">{formatDate(child.pubDate)}</time>
+                            )}
+                          </a>
+                        )}
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              ) : (
+                <a
+                  href={`/posts/${node.slug}`}
+                  class="flex items-start gap-4 px-4 py-3 hover:bg-slate-50 dark:hover:bg-slate-700/50 transition-colors border-b border-slate-100 dark:border-slate-700 group"
+                >
+                  <svg class="w-4 h-4 text-slate-400 mt-1 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+                  </svg>
+                  <div class="flex-1 min-w-0">
+                    <h4 class="font-medium text-slate-900 dark:text-slate-100 group-hover:text-primary-500 transition-colors">{node.title || node.name}</h4>
+                    {node.description && (
+                      <p class="text-sm text-slate-500 dark:text-slate-400 mt-1 line-clamp-1">{node.description}</p>
+                    )}
+                  </div>
+                  {node.pubDate && (
+                    <time class="text-xs text-slate-400 flex-shrink-0">{formatDate(node.pubDate)}</time>
+                  )}
+                </a>
+              )}
+            </div>
+          ))}
+        </div>
+      </div>
+    ) : (
+      <div class="text-center py-16">
+        <div class="text-6xl mb-4">📝</div>
+        <h3 class="text-xl font-semibold text-slate-900 dark:text-slate-100 mb-2">
+          暂无文章
+        </h3>
+        <p class="text-slate-600 dark:text-slate-400">
+          目前还没有发布任何文章，请稍后再来查看。
+        </p>
+      </div>
+    )}
+  </div>
+  </div>
+
+  <!-- 分页导航（仅卡片模式显示） -->
+  <div id="pagination-container">
+    {totalPages > 1 && (
+      <Pagination
+        currentPage={currentPage}
+        totalPages={totalPages}
+        baseUrl="/posts"
+      />
+    )}
+  </div>
+</PageLayout>
+
+<style>
+  .line-clamp-1 {
+    display: -webkit-box;
+    -webkit-line-clamp: 1;
+    -webkit-box-orient: vertical;
+    overflow: hidden;
+  }
+
+  .view-toggle-btn {
+    @apply text-slate-500 dark:text-slate-400;
+  }
+
+  .view-toggle-btn.active {
+    @apply bg-white dark:bg-slate-600 text-primary-600 dark:text-primary-400 shadow-sm;
+  }
+
+  .view-toggle-btn:not(.active):hover {
+    @apply text-slate-700 dark:text-slate-200;
+  }
+
+  .folder-toggle.expanded .folder-chevron {
+    transform: rotate(90deg);
+  }
+
+  .folder-children.show {
+    display: block;
+  }
+</style>
+
+<script>
+  function initViewToggle() {
+    const toggleBtns = document.querySelectorAll('.view-toggle-btn');
+    const cardView = document.getElementById('card-view');
+    const listView = document.getElementById('list-view');
+    const pagination = document.getElementById('pagination-container');
+
+    // 从 localStorage 恢复视图模式
+    const savedView = localStorage.getItem('posts-view-mode') || 'card';
+    setView(savedView);
+
+    toggleBtns.forEach(btn => {
+      btn.addEventListener('click', () => {
+        const view = btn.getAttribute('data-view');
+        if (view) {
+          setView(view);
+          localStorage.setItem('posts-view-mode', view);
+        }
+      });
+    });
+
+    function setView(view: string) {
+      toggleBtns.forEach(btn => {
+        btn.classList.toggle('active', btn.getAttribute('data-view') === view);
+      });
+
+      if (cardView && listView && pagination) {
+        if (view === 'card') {
+          cardView.classList.remove('hidden');
+          listView.classList.add('hidden');
+          pagination.classList.remove('hidden');
+        } else {
+          cardView.classList.add('hidden');
+          listView.classList.remove('hidden');
+          pagination.classList.add('hidden');
+        }
+      }
+    }
+
+    // 文件夹展开/收起
+    const folderToggles = document.querySelectorAll('.folder-toggle');
+    folderToggles.forEach(toggle => {
+      toggle.addEventListener('click', () => {
+        const children = toggle.nextElementSibling;
+        const isExpanded = toggle.classList.toggle('expanded');
+
+        if (children && children.classList.contains('folder-children')) {
+          children.classList.toggle('show', isExpanded);
+        }
+      });
+    });
+
+    // 默认展开第一层文件夹
+    const firstLevelToggles = document.querySelectorAll('.post-tree > .tree-node > .folder-node > .folder-toggle');
+    firstLevelToggles.forEach(toggle => {
+      if (!toggle.classList.contains('expanded')) {
+        (toggle as HTMLElement).click();
+      }
+    });
+  }
+
+  if (document.readyState === 'loading') {
+    document.addEventListener('DOMContentLoaded', initViewToggle);
+  } else {
+    initViewToggle();
+  }
+</script>

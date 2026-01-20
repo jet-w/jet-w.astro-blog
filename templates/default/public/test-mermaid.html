@@ -1,0 +1,124 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Mermaid Test</title>
+    <style>
+        body { padding: 20px; font-family: Arial, sans-serif; }
+        .test-section { margin: 20px 0; padding: 20px; border: 1px solid #ccc; }
+        pre { background: #f5f5f5; padding: 10px; }
+        .mermaid-container {
+            margin: 1.5rem 0;
+            padding: 1rem;
+            border: 1px solid #e2e8f0;
+            border-radius: 0.5rem;
+            background: white;
+            overflow-x: auto;
+            text-align: center;
+        }
+    </style>
+</head>
+<body>
+    <h1>Mermaid 渲染测试</h1>
+
+    <div class="test-section">
+        <h2>测试1: 直接 mermaid 代码块</h2>
+        <pre><code data-language="mermaid">graph TD
+    A[Start] --> B[Process]
+    B --> C[End]</code></pre>
+    </div>
+
+    <div class="test-section">
+        <h2>测试2: 带class的代码块</h2>
+        <pre><code class="language-mermaid">graph LR
+    X[Input] --> Y[Output]</code></pre>
+    </div>
+
+    <div class="test-section">
+        <h2>日志输出</h2>
+        <div id="log"></div>
+    </div>
+
+    <script>
+      // 复制我们的mermaid渲染逻辑
+      function log(message) {
+        const logDiv = document.getElementById('log');
+        logDiv.innerHTML += '<div>' + new Date().toLocaleTimeString() + ': ' + message + '</div>';
+        console.log(message);
+      }
+
+      function loadMermaidAndRender() {
+        // 检查是否有mermaid代码块
+        const mermaidBlocks = document.querySelectorAll('pre code[data-language="mermaid"], pre code.language-mermaid');
+
+        log('检查mermaid代码块: 找到 ' + mermaidBlocks.length + ' 个');
+
+        if (mermaidBlocks.length === 0) {
+          log('没有找到mermaid代码块');
+          return;
+        }
+
+        // 动态加载mermaid脚本
+        const script = document.createElement('script');
+        script.src = 'https://cdn.jsdelivr.net/npm/mermaid@10/dist/mermaid.min.js';
+        script.onload = function() {
+          log('Mermaid库加载完成');
+
+          // 初始化mermaid
+          window.mermaid.initialize({
+            startOnLoad: false,
+            theme: 'default',
+            securityLevel: 'loose'
+          });
+
+          log('Mermaid初始化完成');
+
+          // 处理每个mermaid代码块
+          mermaidBlocks.forEach(async function(block, index) {
+            try {
+              const code = block.textContent.trim();
+              const id = 'mermaid-diagram-' + index;
+
+              log('处理第' + (index+1) + '个图表: ' + code.substring(0, 30) + '...');
+
+              // 使用mermaid渲染
+              const result = await window.mermaid.render(id, code);
+
+              log('第' + (index+1) + '个图表SVG生成成功');
+
+              // 创建容器
+              const container = document.createElement('div');
+              container.className = 'mermaid-container';
+              container.innerHTML = result.svg;
+
+              // 替换原始代码块
+              const preElement = block.closest('pre');
+              if (preElement && preElement.parentNode) {
+                preElement.parentNode.insertBefore(container, preElement);
+                preElement.remove();
+                log('第' + (index+1) + '个图表渲染成功并替换完成');
+              }
+            } catch (error) {
+              log('渲染第' + (index+1) + '个图表失败: ' + error.message);
+              console.error(error);
+            }
+          });
+        };
+
+        script.onerror = function() {
+          log('Mermaid库加载失败');
+        };
+
+        document.head.appendChild(script);
+      }
+
+      // 启动
+      if (document.readyState === 'loading') {
+        document.addEventListener('DOMContentLoaded', loadMermaidAndRender);
+      } else {
+        loadMermaidAndRender();
+      }
+    </script>
+</body>
+</html>

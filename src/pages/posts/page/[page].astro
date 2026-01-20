@@ -1,0 +1,146 @@
+---
+import PageLayout from '@jet-w/astro-blog/layouts/PageLayout.astro';
+import PostCard from '@jet-w/astro-blog/components/blog/PostCard.astro';
+import Pagination from '@jet-w/astro-blog/components/ui/Pagination.astro';
+import { getCollection } from 'astro:content';
+
+export async function getStaticPaths() {
+  const allPostsCollection = await getCollection('posts');
+  const publishedPosts = allPostsCollection.filter(post => !post.data.draft);
+
+  const postsPerPage = 10;
+  const totalPages = Math.ceil(publishedPosts.length / postsPerPage);
+
+  // 生成从第2页开始的所有页面路径（第1页由 index.astro 处理）
+  return Array.from({ length: totalPages - 1 }, (_, i) => ({
+    params: { page: String(i + 2) },
+  }));
+}
+
+const { page } = Astro.params;
+const currentPage = parseInt(page as string, 10);
+
+// 从新的内容目录获取文章数据
+const allPostsCollection = await getCollection('posts');
+const publishedPosts = allPostsCollection
+  .filter(post => !post.data.draft)
+  .sort((a, b) => (b.data.pubDate?.getTime() ?? 0) - (a.data.pubDate?.getTime() ?? 0));
+
+const allPosts = publishedPosts.map(post => ({
+  slug: post.id.toLowerCase(),
+  title: post.data.title,
+  description: post.data.description,
+  pubDate: post.data.pubDate,
+  tags: post.data.tags,
+  categories: post.data.categories,
+  author: post.data.author,
+  readingTime: 5,
+  image: post.data.image
+}));
+
+// 分页逻辑
+const postsPerPage = 10;
+const totalPosts = allPosts.length;
+const totalPages = Math.ceil(totalPosts / postsPerPage);
+const startIndex = (currentPage - 1) * postsPerPage;
+const endIndex = startIndex + postsPerPage;
+const posts = allPosts.slice(startIndex, endIndex);
+
+// 获取所有标签和分类用于筛选
+const allTags = [...new Set(allPosts.flatMap(post => post.tags || []))];
+const allCategories = [...new Set(allPosts.flatMap(post => post.categories || []))];
+---
+
+<PageLayout
+  title={`文章列表 - 第 ${currentPage} 页`}
+  description="浏览所有技术文章和分享内容"
+  showSidebar={true}
+>
+  <!-- 页面头部 -->
+  <div class="mb-12">
+    <div class="text-center">
+      <h1 class="text-4xl font-bold text-slate-900 dark:text-slate-100 mb-4">
+        文章列表
+      </h1>
+      <p class="text-xl text-slate-600 dark:text-slate-400 mb-8">
+        分享技术思考和学习心得
+      </p>
+
+      <!-- 统计信息 -->
+      <div class="inline-flex items-center space-x-6 text-sm text-slate-500 dark:text-slate-400 bg-slate-50 dark:bg-slate-800 px-6 py-3 rounded-lg">
+        <span>共 {totalPosts} 篇文章</span>
+        <span>•</span>
+        <span>{allTags.length} 个标签</span>
+        <span>•</span>
+        <span>{allCategories.length} 个分类</span>
+      </div>
+    </div>
+  </div>
+
+  <!-- 筛选器 -->
+  <div class="mb-8 p-6 bg-white dark:bg-slate-800 rounded-xl border border-slate-200 dark:border-slate-700">
+    <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+      <!-- 按标签筛选 -->
+      <div>
+        <h3 class="text-sm font-semibold text-slate-900 dark:text-slate-100 mb-3">
+          按标签筛选
+        </h3>
+        <div class="flex flex-wrap gap-2">
+          <button class="px-3 py-1 text-xs rounded-full bg-primary-100 dark:bg-primary-900/30 text-primary-700 dark:text-primary-300 hover:bg-primary-200 dark:hover:bg-primary-900/50 transition-colors">
+            全部
+          </button>
+          {allTags.map((tag) => (
+            <button class="px-3 py-1 text-xs rounded-full bg-slate-100 dark:bg-slate-700 text-slate-700 dark:text-slate-300 hover:bg-slate-200 dark:hover:bg-slate-600 transition-colors">
+              {tag}
+            </button>
+          ))}
+        </div>
+      </div>
+
+      <!-- 按分类筛选 -->
+      <div>
+        <h3 class="text-sm font-semibold text-slate-900 dark:text-slate-100 mb-3">
+          按分类筛选
+        </h3>
+        <div class="flex flex-wrap gap-2">
+          <button class="px-3 py-1 text-xs rounded-full bg-primary-100 dark:bg-primary-900/30 text-primary-700 dark:text-primary-300 hover:bg-primary-200 dark:hover:bg-primary-900/50 transition-colors">
+            全部
+          </button>
+          {allCategories.map((category) => (
+            <button class="px-3 py-1 text-xs rounded-full bg-slate-100 dark:bg-slate-700 text-slate-700 dark:text-slate-300 hover:bg-slate-200 dark:hover:bg-slate-600 transition-colors">
+              {category}
+            </button>
+          ))}
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- 文章列表 -->
+  {posts.length > 0 ? (
+    <div class="space-y-8 mb-12">
+      {posts.map((post) => (
+        <PostCard post={post} layout="horizontal" />
+      ))}
+    </div>
+  ) : (
+    <div class="text-center py-16">
+      <div class="text-6xl mb-4">📝</div>
+      <h3 class="text-xl font-semibold text-slate-900 dark:text-slate-100 mb-2">
+        暂无文章
+      </h3>
+      <p class="text-slate-600 dark:text-slate-400">
+        目前还没有发布任何文章，请稍后再来查看。
+      </p>
+    </div>
+  )}
+
+  <!-- 分页导航 -->
+  {totalPages > 1 && (
+    <Pagination
+      currentPage={currentPage}
+      totalPages={totalPages}
+      baseUrl="/posts"
+    />
+  )}
+</PageLayout>

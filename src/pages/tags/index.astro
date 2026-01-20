@@ -1,0 +1,167 @@
+---
+import { getCollection } from 'astro:content';
+import PageLayout from '@jet-w/astro-blog/layouts/PageLayout.astro';
+import TagCloud from '@jet-w/astro-blog/components/blog/TagCloud.astro';
+
+// 从文章集合动态获取所有标签
+const allPosts = await getCollection('posts', ({ data }) => !data.draft);
+
+// 统计标签
+const tagMap = new Map<string, { name: string; count: number }>();
+
+allPosts.forEach(post => {
+  (post.data.tags || []).forEach(tag => {
+    const slug = tag.toLowerCase().replace(/\s+/g, '-');
+    if (tagMap.has(slug)) {
+      tagMap.get(slug)!.count++;
+    } else {
+      tagMap.set(slug, { name: tag, count: 1 });
+    }
+  });
+});
+
+// 转换为数组格式
+const allTags = Array.from(tagMap.entries()).map(([slug, { name, count }]) => ({
+  name,
+  count,
+  slug
+}));
+
+// 按文章数量排序
+const sortedTags = [...allTags].sort((a, b) => b.count - a.count);
+const totalPosts = allTags.reduce((sum, tag) => sum + tag.count, 0);
+
+// 按首字母分组
+type TagType = typeof allTags[0];
+const groupedByLetter = allTags.reduce((acc: Record<string, TagType[]>, tag) => {
+  const firstChar = tag.name.charAt(0).toUpperCase();
+  // 判断是否为中文字符
+  const isChinese = /[\u4e00-\u9fa5]/.test(firstChar);
+  const key = isChinese ? '中文' : firstChar;
+  if (!acc[key]) {
+    acc[key] = [];
+  }
+  acc[key].push(tag);
+  return acc;
+}, {} as Record<string, TagType[]>);
+
+// 排序分组（中文放最后）
+const sortedGroups = Object.entries(groupedByLetter).sort(([a], [b]) => {
+  if (a === '中文') return 1;
+  if (b === '中文') return -1;
+  return a.localeCompare(b);
+});
+---
+
+<PageLayout
+  title="标签"
+  description="按标签浏览文章"
+  showSidebar={true}
+>
+  <!-- 页面头部 -->
+  <div class="text-center mb-12">
+    <h1 class="text-4xl font-bold text-slate-900 dark:text-slate-100 mb-4">
+      文章标签
+    </h1>
+    <p class="text-xl text-slate-600 dark:text-slate-400 mb-8">
+      按标签分类浏览所有文章
+    </p>
+
+    <!-- 统计信息 -->
+    <div class="inline-flex items-center space-x-6 text-sm text-slate-500 dark:text-slate-400 bg-slate-50 dark:bg-slate-800 px-6 py-3 rounded-lg">
+      <span>共 {allTags.length} 个标签</span>
+      <span>•</span>
+      <span>{totalPosts} 篇文章</span>
+    </div>
+  </div>
+
+  <!-- 标签云 -->
+  <section class="mb-16">
+    <h2 class="text-2xl font-bold text-slate-900 dark:text-slate-100 mb-8">
+      标签云
+    </h2>
+    <TagCloud tags={allTags} />
+  </section>
+
+  <!-- 热门标签 -->
+  <section class="mb-16">
+    <h2 class="text-2xl font-bold text-slate-900 dark:text-slate-100 mb-8">
+      热门标签
+    </h2>
+    <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+      {sortedTags.slice(0, 9).map((tag) => (
+        <a
+          href={`/tags/${tag.slug}`}
+          class="group card hover:shadow-lg transform hover:-translate-y-1 transition-all duration-300"
+        >
+          <div class="flex items-center justify-between">
+            <div>
+              <h3 class="text-lg font-semibold text-slate-900 dark:text-slate-100 group-hover:text-primary-500 transition-colors">
+                {tag.name}
+              </h3>
+              <p class="text-sm text-slate-600 dark:text-slate-400">
+                {tag.count} 篇文章
+              </p>
+            </div>
+            <div class="text-3xl font-bold text-primary-500 opacity-80">
+              #{tag.count}
+            </div>
+          </div>
+          <div class="mt-4 h-2 bg-slate-200 dark:bg-slate-700 rounded-full overflow-hidden">
+            <div
+              class="h-full bg-primary-500 rounded-full transition-all duration-500 group-hover:bg-primary-600"
+              style={`width: ${Math.round((tag.count / Math.max(...sortedTags.map(t => t.count))) * 100)}%`}
+            ></div>
+          </div>
+        </a>
+      ))}
+    </div>
+  </section>
+
+  <!-- 所有标签 -->
+  <section class="mb-16">
+    <h2 class="text-2xl font-bold text-slate-900 dark:text-slate-100 mb-8">
+      所有标签
+    </h2>
+    <div class="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
+      {sortedTags.map((tag) => (
+        <a
+          href={`/tags/${tag.slug}`}
+          class="flex items-center justify-between p-4 bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-lg hover:shadow-md hover:border-primary-300 dark:hover:border-primary-600 transition-all duration-200 group"
+        >
+          <span class="font-medium text-slate-900 dark:text-slate-100 group-hover:text-primary-500 transition-colors">
+            {tag.name}
+          </span>
+          <span class="text-sm px-2 py-1 bg-slate-100 dark:bg-slate-700 text-slate-600 dark:text-slate-400 rounded-full">
+            {tag.count}
+          </span>
+        </a>
+      ))}
+    </div>
+  </section>
+
+  <!-- 按字母分组 -->
+  <section>
+    <h2 class="text-2xl font-bold text-slate-900 dark:text-slate-100 mb-8">
+      按首字母分组
+    </h2>
+    {sortedGroups.map(([letter, tags]) => (
+      <div class="mb-6">
+        <h3 class="text-lg font-semibold text-slate-900 dark:text-slate-100 mb-3 border-b border-slate-200 dark:border-slate-700 pb-2">
+          {letter}
+        </h3>
+        <div class="flex flex-wrap gap-2">
+          {tags.sort((a, b) => b.count - a.count).map((tag) => (
+            <a
+              href={`/tags/${tag.slug}`}
+              class="inline-flex items-center px-3 py-1 bg-slate-100 dark:bg-slate-800 hover:bg-primary-100 dark:hover:bg-primary-900/30 text-slate-700 dark:text-slate-300 hover:text-primary-700 dark:hover:text-primary-300 rounded-full transition-colors text-sm"
+            >
+              {tag.name}
+              <span class="ml-2 text-xs opacity-75">({tag.count})</span>
+            </a>
+          ))}
+        </div>
+      </div>
+    ))}
+  </section>
+</PageLayout>

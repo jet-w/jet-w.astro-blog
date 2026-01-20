@@ -1,0 +1,89 @@
+---
+/**
+ * 统一视频播放器组件 - 自动检测视频平台
+ *
+ * 使用方法:
+ * <VideoPlayer src="https://www.youtube.com/watch?v=dQw4w9WgXcQ" />
+ * <VideoPlayer src="https://www.bilibili.com/video/BV1xx411c7mD" />
+ * <VideoPlayer src="/videos/demo.mp4" />
+ */
+
+import YouTube from './YouTube.astro';
+import Bilibili from './Bilibili.astro';
+import Video from './Video.astro';
+
+interface Props {
+  /** 视频源 URL */
+  src: string;
+  /** 视频标题 */
+  title?: string;
+  /** 自定义宽高比 */
+  aspectRatio?: string;
+  /** 是否自动播放 */
+  autoplay?: boolean;
+  /** 是否静音 */
+  muted?: boolean;
+  /** 是否循环播放 */
+  loop?: boolean;
+  /** 封面图片 (仅自托管视频) */
+  poster?: string;
+}
+
+const {
+  src,
+  title,
+  aspectRatio = '16/9',
+  autoplay = false,
+  muted = false,
+  loop = false,
+  poster
+} = Astro.props;
+
+// 检测视频平台
+type Platform = 'youtube' | 'bilibili' | 'self-hosted';
+
+function detectPlatform(url: string): Platform {
+  if (/youtube\.com|youtu\.be/.test(url)) {
+    return 'youtube';
+  }
+  if (/bilibili\.com|b23\.tv/.test(url)) {
+    return 'bilibili';
+  }
+  return 'self-hosted';
+}
+
+const platform = detectPlatform(src);
+---
+
+{platform === 'youtube' && (
+  <YouTube
+    url={src}
+    title={title}
+    aspectRatio={aspectRatio}
+    autoplay={autoplay}
+    muted={muted}
+    loop={loop}
+  />
+)}
+
+{platform === 'bilibili' && (
+  <Bilibili
+    url={src}
+    title={title}
+    aspectRatio={aspectRatio}
+    autoplay={autoplay}
+    muted={muted}
+  />
+)}
+
+{platform === 'self-hosted' && (
+  <Video
+    src={src}
+    title={title}
+    aspectRatio={aspectRatio}
+    autoplay={autoplay}
+    muted={muted}
+    loop={loop}
+    poster={poster}
+  />
+)}

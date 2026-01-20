@@ -1,0 +1,217 @@
+---
+import BaseLayout from './BaseLayout.astro';
+import Header from '../components/layout/Header.astro';
+import Footer from '../components/layout/Footer.astro';
+import Sidebar from '../components/layout/Sidebar.astro';
+import SidebarToggle from '../components/ui/SidebarToggle.vue';
+
+export interface Props {
+  title?: string;
+  description?: string;
+  image?: string;
+  type?: 'website' | 'article';
+  publishedTime?: string;
+  modifiedTime?: string;
+  tags?: string[];
+  showSidebar?: boolean;
+  showToc?: boolean;
+}
+
+const {
+  title,
+  description,
+  image,
+  type,
+  publishedTime,
+  modifiedTime,
+  tags,
+  showSidebar = true,
+  showToc = false
+} = Astro.props;
+---
+
+<BaseLayout
+  title={title}
+  description={description}
+  image={image}
+  type={type}
+  publishedTime={publishedTime}
+  modifiedTime={modifiedTime}
+  tags={tags}
+>
+  <Header />
+
+  <main class="flex-1 flex w-full min-w-0">
+    <!-- 左侧边栏 - 桌面端 -->
+    {showSidebar && (
+      <aside class="hidden lg:block shrink-0 transition-all duration-300 relative" data-sidebar style="width: var(--sidebar-width, 256px);">
+        <div class="sticky top-20 h-[calc(100vh-5rem)] overflow-y-auto">
+          <Sidebar />
+        </div>
+        <!-- 拖拽调整宽度的手柄 -->
+        <div
+          class="absolute top-0 right-0 w-1 h-full cursor-col-resize group z-10"
+          data-sidebar-resizer
+        >
+          <div class="absolute top-0 right-0 w-4 h-full -mr-2 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity">
+            <div class="w-1 h-16 bg-primary-400 dark:bg-primary-500 rounded-full"></div>
+          </div>
+        </div>
+      </aside>
+    )}
+
+    <!-- 移动端侧边栏遮罩 -->
+    {showSidebar && (
+      <div
+        class="lg:hidden fixed inset-0 bg-black/50 z-40 hidden"
+        data-sidebar-overlay
+        onclick="this.classList.add('hidden'); document.querySelector('[data-mobile-sidebar]').classList.add('-translate-x-full');"
+      ></div>
+    )}
+
+    <!-- 移动端侧边栏 -->
+    {showSidebar && (
+      <aside
+        class="lg:hidden fixed top-16 left-0 w-72 h-[calc(100vh-4rem)] bg-white dark:bg-slate-900 z-50 transform -translate-x-full transition-transform duration-300 shadow-xl overflow-y-auto"
+        data-mobile-sidebar
+      >
+        <div class="p-4">
+          <Sidebar />
+        </div>
+      </aside>
+    )}
+
+    <!-- 主内容区 -->
+    <div class={`flex-1 transition-all duration-300 ${showSidebar ? 'lg:px-8' : ''} ${showToc ? 'xl:pr-64' : ''} relative`} data-main-content>
+      <!-- 侧边栏切换按钮 - 桌面端固定位置 -->
+      {showSidebar && (
+        <div class="hidden lg:block fixed top-20 left-1 z-40 transition-all duration-300" data-sidebar-toggle>
+          <SidebarToggle client:load />
+        </div>
+      )}
+
+      <!-- 侧边栏切换按钮 - 移动端浮动按钮 -->
+      {showSidebar && (
+        <button
+          class="lg:hidden fixed bottom-20 left-4 z-40 p-3 bg-primary-500 hover:bg-primary-600 text-white rounded-full shadow-lg transition-colors"
+          data-mobile-sidebar-toggle
+          aria-label="打开侧边栏"
+          onclick="document.querySelector('[data-sidebar-overlay]').classList.remove('hidden'); document.querySelector('[data-mobile-sidebar]').classList.remove('-translate-x-full');"
+        >
+          <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6h16M4 12h16M4 18h7" />
+          </svg>
+        </button>
+      )}
+
+      <div class="container mx-auto px-4 py-8 max-w-4xl">
+        <slot />
+      </div>
+    </div>
+
+    <!-- 右侧TOC -->
+    {showToc && (
+      <aside class="hidden xl:block w-64 shrink-0">
+        <div class="sticky top-20 h-[calc(100vh-5rem)] overflow-y-auto">
+          <slot name="toc" />
+        </div>
+      </aside>
+    )}
+  </main>
+
+  <Footer />
+
+  <!-- 回到顶部按钮 -->
+  <button class="back-to-top" aria-label="回到顶部">
+    <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+      <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 10l7-7m0 0l7 7m-7-7v18" />
+    </svg>
+  </button>
+</BaseLayout>
+
+<script>
+  // 侧边栏拖拽调整宽度
+  function initSidebarResizer() {
+    const sidebar = document.querySelector('[data-sidebar]') as HTMLElement;
+    const resizer = document.querySelector('[data-sidebar-resizer]') as HTMLElement;
+
+    if (!sidebar || !resizer) return;
+
+    // 从 localStorage 恢复宽度
+    const savedWidth = localStorage.getItem('sidebar-width');
+    if (savedWidth) {
+      sidebar.style.setProperty('--sidebar-width', savedWidth);
+    }
+
+    let isResizing = false;
+    let startX = 0;
+    let startWidth = 0;
+
+    const startResize = (e: MouseEvent) => {
+      isResizing = true;
+      startX = e.clientX;
+      startWidth = sidebar.offsetWidth;
+
+      // 禁用过渡效果以获得流畅拖拽
+      sidebar.style.transition = 'none';
+
+      // 添加全局样式防止选中文本
+      document.body.style.cursor = 'col-resize';
+      document.body.style.userSelect = 'none';
+
+      document.addEventListener('mousemove', doResize);
+      document.addEventListener('mouseup', stopResize);
+    };
+
+    const doResize = (e: MouseEvent) => {
+      if (!isResizing) return;
+
+      const diff = e.clientX - startX;
+      const newWidth = Math.min(Math.max(startWidth + diff, 200), 500); // 最小200px，最大500px
+
+      sidebar.style.setProperty('--sidebar-width', `${newWidth}px`);
+    };
+
+    const stopResize = () => {
+      if (!isResizing) return;
+
+      isResizing = false;
+
+      // 恢复过渡效果
+      sidebar.style.transition = '';
+
+      // 恢复全局样式
+      document.body.style.cursor = '';
+      document.body.style.userSelect = '';
+
+      // 保存宽度到 localStorage
+      const currentWidth = getComputedStyle(sidebar).getPropertyValue('--sidebar-width');
+      if (currentWidth) {
+        localStorage.setItem('sidebar-width', currentWidth.trim());
+      }
+
+      document.removeEventListener('mousemove', doResize);
+      document.removeEventListener('mouseup', stopResize);
+    };
+
+    resizer.addEventListener('mousedown', startResize);
+  }
+
+  // DOM 加载完成后初始化
+  if (document.readyState === 'loading') {
+    document.addEventListener('DOMContentLoaded', initSidebarResizer);
+  } else {
+    initSidebarResizer();
+  }
+</script>
+
+<style>
+  /* 拖拽时的视觉反馈 */
+  [data-sidebar-resizer]:hover {
+    background: linear-gradient(to right, transparent, rgba(var(--color-primary-500), 0.1), transparent);
+  }
+
+  [data-sidebar-resizer]:active {
+    background: linear-gradient(to right, transparent, rgba(var(--color-primary-500), 0.2), transparent);
+  }
+</style>

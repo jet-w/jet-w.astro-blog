@@ -1,0 +1,65 @@
+---
+/**
+ * 标签卡片组件
+ * 用于展示技术栈、技能等带标签的内容
+ *
+ * 使用方式:
+ * <TagCard title="技术栈">
+ *   <TagCard.Group name="前端" color="primary" tags={['Vue', 'React']} />
+ *   <TagCard.Group name="后端" color="secondary" tags={['Node.js']} />
+ * </TagCard>
+ *
+ * 或者简单用法:
+ * <TagCard title="技术栈" groups={[{name: '前端', tags: ['Vue'], color: 'primary'}]} />
+ */
+
+export interface TagGroup {
+  name: string;
+  tags: string[];
+  color?: 'primary' | 'secondary' | 'accent' | 'success' | 'warning' | 'danger' | 'info';
+}
+
+export interface Props {
+  title: string;
+  groups?: TagGroup[];
+}
+
+const { title, groups } = Astro.props;
+
+const colorStyles = {
+  primary: { bg: '#dbeafe', text: '#1d4ed8' },
+  secondary: { bg: '#e0e7ff', text: '#4338ca' },
+  accent: { bg: '#ede9fe', text: '#6d28d9' },
+  success: { bg: '#dcfce7', text: '#15803d' },
+  warning: { bg: '#fef9c3', text: '#a16207' },
+  danger: { bg: '#fee2e2', text: '#b91c1c' },
+  info: { bg: '#cffafe', text: '#0e7490' }
+};
+---
+
+<div class="card mb-6 last:mb-0 h-full">
+  <h2 class="text-2xl font-bold text-slate-900 dark:text-slate-100 mb-6">
+    {title}
+  </h2>
+  <div class="space-y-1">
+    {groups ? (
+      groups.map((group) => (
+        <div>
+          <h3 class="font-semibold text-slate-900 dark:text-slate-100 mb-2">{group.name}</h3>
+          <div class="flex flex-wrap gap-2">
+            {group.tags.map((tag) => (
+              <span
+                class="px-3 py-1 rounded-full text-sm"
+                style={`background-color: ${colorStyles[group.color || 'primary'].bg}; color: ${colorStyles[group.color || 'primary'].text};`}
+              >
+                {tag}
+              </span>
+            ))}
+          </div>
+        </div>
+      ))
+    ) : (
+      <slot />
+    )}
+  </div>
+</div>

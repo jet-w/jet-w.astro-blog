@@ -1,0 +1,313 @@
+---
+/**
+ * 内嵌幻灯片组件
+ *
+ * 使用方法:
+ *
+ * 1. 通过 iframe 嵌入已有幻灯片:
+ * <Slides src="/slides/demo" />
+ * <Slides src="/slides/demo" height="500px" />
+ *
+ * 2. 直接内嵌 Markdown 内容:
+ * <Slides>
+ * # 第一页
+ *
+ * 内容...
+ *
+ * ---
+ *
+ * # 第二页
+ *
+ * 更多内容...
+ * </Slides>
+ */
+
+interface Props {
+  /** 幻灯片 URL（使用 iframe 嵌入模式） */
+  src?: string;
+  /** 容器高度 */
+  height?: string;
+  /** 宽高比（当不指定 height 时使用） */
+  aspectRatio?: string;
+  /** Reveal.js 主题 */
+  theme?: string;
+  /** 过渡效果 */
+  transition?: string;
+  /** 显示控制箭头 */
+  controls?: boolean;
+  /** 显示进度条 */
+  progress?: boolean;
+  /** 内容居中 */
+  center?: boolean;
+  /** 显示页码 */
+  slideNumber?: boolean;
+  /** 是否嵌入模式（隐藏部分 UI） */
+  embedded?: boolean;
+  /** 标题（用于无障碍） */
+  title?: string;
+}
+
+const {
+  src,
+  height,
+  aspectRatio = '16/9',
+  theme = 'black',
+  transition = 'slide',
+  controls = true,
+  progress = true,
+  center = true,
+  slideNumber = false,
+  embedded = true,
+  title = '幻灯片演示'
+} = Astro.props;
+
+// 生成唯一 ID
+const slidesId = `slides-${Math.random().toString(36).substr(2, 9)}`;
+
+// Reveal.js 配置
+const revealConfig = JSON.stringify({
+  hash: false,
+  controls,
+  progress,
+  center,
+  transition,
+  slideNumber,
+  embedded,
+  keyboard: true,
+  overview: true,
+  touch: true,
+});
+
+// 获取 slot 内容
+const slotContent = await Astro.slots.render('default');
+const hasInlineContent = slotContent && slotContent.trim().length > 0;
+
+// 解析 Markdown 为幻灯片结构
+function parseSlides(markdown: string): string[][] {
+  // 移除 HTML 注释和空白
+  const cleanMarkdown = markdown
+    .replace(/<!--[\s\S]*?-->/g, '')
+    .trim();
+
+  // 按水平分隔符分割
+  const horizontalSlides = cleanMarkdown.split(/\n---\n/);
+
+  return horizontalSlides.map((hSlide) => {
+    // 按垂直分隔符分割
+    return hSlide.split(/\n----\n/).map(s => s.trim());
+  });
+}
+
+const slidesData = hasInlineContent ? parseSlides(slotContent) : [];
+---
+
+{src ? (
+  <!-- iframe 嵌入模式 -->
+  <div
+    class="slides-embed-container"
+    style={height ? `height: ${height};` : `aspect-ratio: ${aspectRatio};`}
+  >
+    <iframe
+      src={`${src}${src.includes('?') ? '&' : '?'}embed=true`}
+      title={title}
+      class="slides-iframe"
+      allowfullscreen
+      loading="lazy"
+    ></iframe>
+    <a
+      href={src}
+      target="_blank"
+      class="slides-fullscreen-btn"
+      title="在新窗口打开"
+    >
+      <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+        <polyline points="15 3 21 3 21 9"></polyline>
+        <polyline points="9 21 3 21 3 15"></polyline>
+        <line x1="21" y1="3" x2="14" y2="10"></line>
+        <line x1="3" y1="21" x2="10" y2="14"></line>
+      </svg>
+    </a>
+  </div>
+) : hasInlineContent ? (
+  <!-- 内联内容模式 -->
+  <div
+    class="slides-inline-container"
+    style={height ? `height: ${height};` : `aspect-ratio: ${aspectRatio};`}
+  >
+    <div class="reveal" id={slidesId}>
+      <div class="slides">
+        {slidesData.map((verticalSlides) => (
+          <section>
+            {verticalSlides.map((slideContent) => (
+              <section data-markdown>
+                <textarea data-template set:text={slideContent}></textarea>
+              </section>
+            ))}
+          </section>
+        ))}
+      </div>
+    </div>
+
+    <!-- 全屏按钮 -->
+    <button
+      class="slides-fullscreen-btn"
+      title="全屏"
+      onclick={`document.getElementById('${slidesId}').requestFullscreen()`}
+    >
+      <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+        <polyline points="15 3 21 3 21 9"></polyline>
+        <polyline points="9 21 3 21 3 15"></polyline>
+        <line x1="21" y1="3" x2="14" y2="10"></line>
+        <line x1="3" y1="21" x2="10" y2="14"></line>
+      </svg>
+    </button>
+  </div>
+
+  <!-- Reveal.js 资源 -->
+  <link rel="stylesheet" href="/slides/reveal.css" />
+  <link rel="stylesheet" href={`/slides/theme/${theme}.css`} />
+  <link rel="stylesheet" href="/slides/plugin/highlight/monokai.css" />
+
+  <script is:inline src="/slides/reveal.js"></script>
+  <script is:inline src="/slides/plugin/markdown/markdown.js"></script>
+  <script is:inline src="/slides/plugin/highlight/highlight.js"></script>
+
+  <script is:inline define:vars={{ slidesId, revealConfig }}>
+    (function() {
+      function initSlides() {
+        const element = document.getElementById(slidesId);
+        if (!element || element.dataset.initialized) return;
+
+        const config = JSON.parse(revealConfig);
+
+        // 使用 Reveal 构造函数创建独立实例
+        const deck = new Reveal(element, {
+          hash: config.hash,
+          controls: config.controls,
+          progress: config.progress,
+          center: config.center,
+          transition: config.transition,
+          slideNumber: config.slideNumber,
+          embedded: config.embedded,
+          keyboard: config.keyboard,
+          overview: config.overview,
+          touch: config.touch,
+          plugins: [RevealMarkdown, RevealHighlight]
+        });
+
+        deck.initialize();
+        element.dataset.initialized = 'true';
+      }
+
+      if (document.readyState === 'loading') {
+        document.addEventListener('DOMContentLoaded', initSlides);
+      } else {
+        // 延迟初始化确保 Reveal.js 已加载
+        setTimeout(initSlides, 100);
+      }
+    })();
+  </script>
+) : (
+  <!-- 无内容提示 -->
+  <div class="slides-empty">
+    <p>请提供 <code>src</code> 属性或内联 Markdown 内容</p>
+  </div>
+)}
+
+<style>
+  /* 嵌入容器 */
+  .slides-embed-container,
+  .slides-inline-container {
+    position: relative;
+    width: 100%;
+    border-radius: 0.5rem;
+    overflow: hidden;
+    background: #000;
+    box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);
+  }
+
+  /* iframe 样式 */
+  .slides-iframe {
+    width: 100%;
+    height: 100%;
+    border: none;
+  }
+
+  /* 内联 Reveal 容器 */
+  .slides-inline-container .reveal {
+    width: 100%;
+    height: 100%;
+  }
+
+  /* 全屏按钮 */
+  .slides-fullscreen-btn {
+    position: absolute;
+    top: 10px;
+    right: 10px;
+    z-index: 30;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 32px;
+    height: 32px;
+    background: rgba(0, 0, 0, 0.5);
+    border: none;
+    border-radius: 4px;
+    color: white;
+    cursor: pointer;
+    opacity: 0;
+    transition: opacity 0.3s;
+    text-decoration: none;
+  }
+
+  .slides-embed-container:hover .slides-fullscreen-btn,
+  .slides-inline-container:hover .slides-fullscreen-btn {
+    opacity: 0.8;
+  }
+
+  .slides-fullscreen-btn:hover {
+    opacity: 1 !important;
+    background: rgba(0, 0, 0, 0.7);
+  }
+
+  /* 空内容提示 */
+  .slides-empty {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 2rem;
+    background: #f3f4f6;
+    border-radius: 0.5rem;
+    color: #6b7280;
+  }
+
+  .slides-empty code {
+    padding: 0.25rem 0.5rem;
+    background: #e5e7eb;
+    border-radius: 0.25rem;
+    font-size: 0.875rem;
+  }
+
+  :global(.dark) .slides-empty {
+    background: #1f2937;
+    color: #9ca3af;
+  }
+
+  :global(.dark) .slides-empty code {
+    background: #374151;
+  }
+
+  /* 内联模式下的 Reveal.js 样式覆盖 */
+  .slides-inline-container .reveal .slides {
+    text-align: left;
+  }
+
+  .slides-inline-container .reveal .slides section {
+    padding: 20px;
+  }
+
+  /* 全屏模式样式 */
+  .slides-inline-container .reveal:fullscreen {
+    background: #000;
+  }
+</style>

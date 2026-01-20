@@ -1,0 +1,92 @@
+---
+/**
+ * YouTube 视频嵌入组件
+ *
+ * 使用方法:
+ * <YouTube id="dQw4w9WgXcQ" />
+ * <YouTube id="dQw4w9WgXcQ" title="视频标题" />
+ * <YouTube url="https://www.youtube.com/watch?v=dQw4w9WgXcQ" />
+ */
+
+interface Props {
+  /** YouTube 视频 ID */
+  id?: string;
+  /** YouTube 视频完整 URL */
+  url?: string;
+  /** 视频标题 (用于无障碍) */
+  title?: string;
+  /** 开始时间 (秒) */
+  start?: number;
+  /** 是否自动播放 */
+  autoplay?: boolean;
+  /** 是否静音 */
+  muted?: boolean;
+  /** 是否循环播放 */
+  loop?: boolean;
+  /** 自定义宽高比 (默认 16/9) */
+  aspectRatio?: string;
+}
+
+const {
+  id,
+  url,
+  title = 'YouTube 视频',
+  start = 0,
+  autoplay = false,
+  muted = false,
+  loop = false,
+  aspectRatio = '16/9'
+} = Astro.props;
+
+// 从 URL 中提取视频 ID
+function extractVideoId(videoUrl: string): string {
+  const patterns = [
+    /(?:youtube\.com\/watch\?v=|youtu\.be\/|youtube\.com\/embed\/)([^&\n?#]+)/,
+    /youtube\.com\/shorts\/([^&\n?#]+)/
+  ];
+
+  for (const pattern of patterns) {
+    const match = videoUrl.match(pattern);
+    if (match) return match[1];
+  }
+  return videoUrl;
+}
+
+const videoId = id || (url ? extractVideoId(url) : '');
+
+// 构建嵌入 URL 参数
+const params = new URLSearchParams();
+if (start > 0) params.set('start', start.toString());
+if (autoplay) params.set('autoplay', '1');
+if (muted) params.set('mute', '1');
+if (loop) {
+  params.set('loop', '1');
+  params.set('playlist', videoId);
+}
+params.set('rel', '0'); // 不显示相关视频
+
+const embedUrl = `https://www.youtube-nocookie.com/embed/${videoId}${params.toString() ? '?' + params.toString() : ''}`;
+---
+
+{videoId ? (
+  <div class="video-container youtube-video" style={`aspect-ratio: ${aspectRatio};`}>
+    <iframe
+      src={embedUrl}
+      title={title}
+      frameborder="0"
+      allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share"
+      allowfullscreen
+      loading="lazy"
+    ></iframe>
+    <div class="video-platform-badge">
+      <svg viewBox="0 0 24 24" fill="currentColor" class="w-4 h-4">
+        <path d="M23.498 6.186a3.016 3.016 0 0 0-2.122-2.136C19.505 3.545 12 3.545 12 3.545s-7.505 0-9.377.505A3.017 3.017 0 0 0 .502 6.186C0 8.07 0 12 0 12s0 3.93.502 5.814a3.016 3.016 0 0 0 2.122 2.136c1.871.505 9.376.505 9.376.505s7.505 0 9.377-.505a3.015 3.015 0 0 0 2.122-2.136C24 15.93 24 12 24 12s0-3.93-.502-5.814zM9.545 15.568V8.432L15.818 12l-6.273 3.568z"/>
+      </svg>
+      <span>YouTube</span>
+    </div>
+  </div>
+) : (
+  <div class="video-error">
+    <p>无效的 YouTube 视频链接</p>
+  </div>
+)}

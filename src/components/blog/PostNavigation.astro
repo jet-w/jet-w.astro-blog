@@ -1,0 +1,106 @@
+---
+// 模拟获取上一篇和下一篇文章
+const allPosts = [
+  {
+    slug: 'tailwind-best-practices',
+    title: 'Tailwind CSS最佳实践指南',
+    pubDate: new Date('2025-01-06')
+  },
+  {
+    slug: 'welcome-to-astro',
+    title: '欢迎来到Astro技术博客',
+    pubDate: new Date('2025-01-08')
+  },
+  {
+    slug: 'astro-vs-nextjs',
+    title: 'Astro vs Next.js：静态站点生成器的对比',
+    pubDate: new Date('2025-01-09')
+  }
+];
+
+// 当前文章（这里硬编码，实际应该从props或context获取）
+const currentSlug = 'welcome-to-astro';
+const currentIndex = allPosts.findIndex(post => post.slug === currentSlug);
+
+const prevPost = currentIndex > 0 ? allPosts[currentIndex - 1] : null;
+const nextPost = currentIndex < allPosts.length - 1 ? allPosts[currentIndex + 1] : null;
+---
+
+{(prevPost || nextPost) && (
+  <nav class="flex flex-col sm:flex-row justify-between items-stretch gap-4 my-12">
+    <!-- 上一篇文章 -->
+    <div class="flex-1">
+      {prevPost ? (
+        <a
+          href={`/posts/${prevPost.slug}`}
+          class="group flex flex-col sm:flex-row items-start sm:items-center p-6 bg-slate-50 dark:bg-slate-800 rounded-xl border border-slate-200 dark:border-slate-700 hover:shadow-md transition-all duration-300 h-full"
+        >
+          <div class="flex items-center text-slate-500 dark:text-slate-400 mb-2 sm:mb-0 sm:mr-4">
+            <svg class="w-5 h-5 mr-2 group-hover:-translate-x-1 transition-transform" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7" />
+            </svg>
+            <span class="text-sm font-medium">上一篇</span>
+          </div>
+          <div class="flex-1 min-w-0">
+            <h3 class="text-slate-900 dark:text-slate-100 font-medium group-hover:text-primary-500 transition-colors line-clamp-2">
+              {prevPost.title}
+            </h3>
+          </div>
+        </a>
+      ) : (
+        <div class="p-6 bg-slate-50 dark:bg-slate-800 rounded-xl border border-slate-200 dark:border-slate-700 opacity-50 h-full">
+          <div class="flex items-center text-slate-400 dark:text-slate-600 mb-2">
+            <svg class="w-5 h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7" />
+            </svg>
+            <span class="text-sm font-medium">没有更多了</span>
+          </div>
+        </div>
+      )}
+    </div>
+
+    <!-- 分隔线 -->
+    <div class="hidden sm:block w-px bg-slate-200 dark:bg-slate-700 mx-4"></div>
+    <div class="sm:hidden h-px bg-slate-200 dark:bg-slate-700"></div>
+
+    <!-- 下一篇文章 -->
+    <div class="flex-1">
+      {nextPost ? (
+        <a
+          href={`/posts/${nextPost.slug}`}
+          class="group flex flex-col sm:flex-row-reverse items-start sm:items-center p-6 bg-slate-50 dark:bg-slate-800 rounded-xl border border-slate-200 dark:border-slate-700 hover:shadow-md transition-all duration-300 h-full text-left sm:text-right"
+        >
+          <div class="flex items-center text-slate-500 dark:text-slate-400 mb-2 sm:mb-0 sm:ml-4">
+            <span class="text-sm font-medium mr-2">下一篇</span>
+            <svg class="w-5 h-5 group-hover:translate-x-1 transition-transform" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7" />
+            </svg>
+          </div>
+          <div class="flex-1 min-w-0">
+            <h3 class="text-slate-900 dark:text-slate-100 font-medium group-hover:text-primary-500 transition-colors line-clamp-2">
+              {nextPost.title}
+            </h3>
+          </div>
+        </a>
+      ) : (
+        <div class="p-6 bg-slate-50 dark:bg-slate-800 rounded-xl border border-slate-200 dark:border-slate-700 opacity-50 h-full text-right">
+          <div class="flex items-center justify-end text-slate-400 dark:text-slate-600 mb-2">
+            <span class="text-sm font-medium mr-2">没有更多了</span>
+            <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7" />
+            </svg>
+          </div>
+        </div>
+      )}
+    </div>
+  </nav>
+)}
+
+<style>
+  .line-clamp-2 {
+    display: -webkit-box;
+    -webkit-line-clamp: 2;
+    -webkit-box-orient: vertical;
+    overflow: hidden;
+  }
+</style>

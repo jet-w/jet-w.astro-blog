@@ -1,0 +1,54 @@
+---
+import { getCollection, render } from 'astro:content';
+import SlidesLayout from '@jet-w/astro-blog/layouts/SlidesLayout.astro';
+
+export async function getStaticPaths() {
+  const slides = await getCollection('slides', ({ data }) => !data.draft);
+  return slides.map((slide) => ({
+    params: { slug: slide.id },
+    props: { slide },
+  }));
+}
+
+const { slide } = Astro.props;
+const { Content } = await render(slide);
+
+// 获取 Markdown 原始内容用于 Reveal.js
+const slideContent = slide.body || '';
+
+// 将 Markdown 内容解析为幻灯片
+// 使用 --- 作为水平分隔符，---- 作为垂直分隔符
+function parseSlides(markdown: string): string[][] {
+  // 按水平分隔符分割
+  const horizontalSlides = markdown.split(/\n---\n/);
+
+  return horizontalSlides.map((hSlide) => {
+    // 按垂直分隔符分割
+    return hSlide.split(/\n----\n/);
+  });
+}
+
+const slidesData = parseSlides(slideContent);
+---
+
+<SlidesLayout
+  title={slide.data.title}
+  description={slide.data.description}
+  theme={slide.data.theme}
+  transition={slide.data.transition}
+  controls={slide.data.controls}
+  progress={slide.data.progress}
+  center={slide.data.center}
+  hash={slide.data.hash}
+  slideNumber={slide.data.slideNumber}
+>
+  {slidesData.map((verticalSlides) => (
+    <section>
+      {verticalSlides.map((slideContent) => (
+        <section data-markdown>
+          <textarea data-template set:text={slideContent}></textarea>
+        </section>
+      ))}
+    </section>
+  ))}
+</SlidesLayout>

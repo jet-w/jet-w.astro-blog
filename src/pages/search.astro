@@ -1,0 +1,50 @@
+---
+import PageLayout from '@jet-w/astro-blog/layouts/PageLayout.astro';
+import SearchInterface from '@jet-w/astro-blog/components/ui/SearchInterface.vue';
+---
+
+<PageLayout
+  title="搜索"
+  description="搜索博客文章和内容"
+  showSidebar={true}
+>
+  <div class="max-w-4xl mx-auto">
+    <!-- 页面头部 -->
+    <div class="text-center mb-12">
+      <h1 class="text-4xl font-bold text-slate-900 dark:text-slate-100 mb-4">
+        搜索文章
+      </h1>
+      <p class="text-xl text-slate-600 dark:text-slate-400">
+        在所有文章中查找您感兴趣的内容
+      </p>
+    </div>
+
+    <!-- 搜索界面 -->
+    <SearchInterface client:load />
+
+    <!-- 搜索提示 -->
+    <div class="mt-12 p-6 bg-slate-50 dark:bg-slate-800 rounded-xl">
+      <h2 class="text-lg font-semibold text-slate-900 dark:text-slate-100 mb-4">
+        搜索技巧
+      </h2>
+      <div class="grid grid-cols-1 md:grid-cols-2 gap-4 text-sm text-slate-600 dark:text-slate-400">
+        <div>
+          <h3 class="font-medium text-slate-900 dark:text-slate-100 mb-2">基础搜索</h3>
+          <ul class="space-y-1">
+            <li>• 输入关键词搜索标题和内容</li>
+            <li>• 支持中英文混合搜索</li>
+            <li>• 自动忽略大小写</li>
+          </ul>
+        </div>
+        <div>
+          <h3 class="font-medium text-slate-900 dark:text-slate-100 mb-2">高级功能</h3>
+          <ul class="space-y-1">
+            <li>• 实时搜索建议</li>
+            <li>• 按标签和分类筛选</li>
+            <li>• 支持模糊匹配</li>
+          </ul>
+        </div>
+      </div>
+    </div>
+  </div>
+</PageLayout>

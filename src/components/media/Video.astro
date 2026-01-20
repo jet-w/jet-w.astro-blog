@@ -1,0 +1,111 @@
+---
+/**
+ * 自托管视频组件
+ *
+ * 使用方法:
+ * <Video src="/videos/demo.mp4" />
+ * <Video src="/videos/demo.mp4" poster="/images/poster.jpg" />
+ * <Video src="/videos/demo.webm" type="video/webm" />
+ * <Video src="/videos/demo.mp4" autoplay muted loop />
+ */
+
+interface Props {
+  /** 视频源 URL */
+  src: string;
+  /** 视频类型 (如 video/mp4, video/webm) */
+  type?: string;
+  /** 封面图片 */
+  poster?: string;
+  /** 视频标题 */
+  title?: string;
+  /** 是否自动播放 */
+  autoplay?: boolean;
+  /** 是否静音 */
+  muted?: boolean;
+  /** 是否循环播放 */
+  loop?: boolean;
+  /** 是否显示控制栏 */
+  controls?: boolean;
+  /** 预加载策略: none, metadata, auto */
+  preload?: 'none' | 'metadata' | 'auto';
+  /** 自定义宽高比 (默认 16/9) */
+  aspectRatio?: string;
+  /** 备用视频源列表 */
+  sources?: Array<{ src: string; type: string }>;
+}
+
+const {
+  src,
+  type,
+  poster,
+  title = '视频',
+  autoplay = false,
+  muted = false,
+  loop = false,
+  controls = true,
+  preload = 'metadata',
+  aspectRatio = '16/9',
+  sources = []
+} = Astro.props;
+
+// 自动检测视频类型
+function getVideoType(videoSrc: string): string {
+  const ext = videoSrc.split('.').pop()?.toLowerCase();
+  const typeMap: Record<string, string> = {
+    mp4: 'video/mp4',
+    webm: 'video/webm',
+    ogg: 'video/ogg',
+    ogv: 'video/ogg',
+    mov: 'video/quicktime',
+    avi: 'video/x-msvideo',
+    mkv: 'video/x-matroska'
+  };
+  return typeMap[ext || ''] || 'video/mp4';
+}
+
+const videoType = type || getVideoType(src);
+
+// 合并所有视频源
+const allSources = [
+  { src, type: videoType },
+  ...sources
+];
+---
+
+<div class="video-container self-hosted-video" style={`aspect-ratio: ${aspectRatio};`}>
+  <video
+    {title}
+    {poster}
+    {autoplay}
+    {muted}
+    {loop}
+    {controls}
+    {preload}
+    playsinline
+    class="w-full h-full object-contain bg-black"
+  >
+    {allSources.map(source => (
+      <source src={source.src} type={source.type} />
+    ))}
+    <p class="video-fallback">
+      您的浏览器不支持 HTML5 视频。
+      <a href={src} download>点击下载视频</a>
+    </p>
+  </video>
+  <div class="video-platform-badge self-hosted">
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" class="w-4 h-4">
+      <polygon points="5 3 19 12 5 21 5 3"></polygon>
+    </svg>
+    <span>Video</span>
+  </div>
+</div>
+
+<style>
+  .self-hosted-video video {
+    border-radius: 0.5rem;
+  }
+
+  .self-hosted-video video::-webkit-media-controls-panel {
+    background: linear-gradient(transparent, rgba(0, 0, 0, 0.7));
+  }
+</style>

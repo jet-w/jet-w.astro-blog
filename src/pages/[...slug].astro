@@ -1,0 +1,27 @@
+---
+import { getCollection, render } from 'astro:content';
+import AboutLayout from '@jet-w/astro-blog/layouts/AboutLayout.astro';
+import PageLayout from '@jet-w/astro-blog/layouts/PageLayout.astro';
+
+export async function getStaticPaths() {
+  const pages = await getCollection('pages');
+  return pages.map((page) => ({
+    params: { slug: page.id === 'index' ? undefined : page.id },
+    props: { page },
+  }));
+}
+
+const { page } = Astro.props;
+const { Content } = await render(page);
+const isHomePage = page.id === 'index';
+---
+
+{isHomePage ? (
+  <PageLayout title={page.data.title} description={page.data.description} showSidebar={false}>
+    <Content />
+  </PageLayout>
+) : (
+  <AboutLayout title={page.data.title} description={page.data.description}>
+    <Content />
+  </AboutLayout>
+)}

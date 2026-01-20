@@ -1,0 +1,44 @@
+---
+/**
+ * 首页统计信息组件
+ */
+import { getCollection } from 'astro:content';
+
+const allPosts = await getCollection('posts');
+const publishedPosts = allPosts.filter(post => !post.data.draft);
+
+const totalPosts = publishedPosts.length;
+const allTags = new Set(publishedPosts.flatMap(post => post.data.tags || []));
+const allCategories = new Set(publishedPosts.flatMap(post => post.data.categories || []));
+const totalTags = allTags.size;
+const totalCategories = allCategories.size;
+---
+
+<section class="mb-16">
+  <div class="grid grid-cols-1 sm:grid-cols-3 gap-6">
+    <div class="card text-center">
+      <div class="text-3xl font-bold text-primary-500 mb-2">
+        {totalPosts}
+      </div>
+      <div class="text-sm text-slate-600 dark:text-slate-400">
+        文章总数
+      </div>
+    </div>
+    <div class="card text-center">
+      <div class="text-3xl font-bold text-primary-500 mb-2">
+        {totalTags}
+      </div>
+      <div class="text-sm text-slate-600 dark:text-slate-400">
+        标签数量
+      </div>
+    </div>
+    <div class="card text-center">
+      <div class="text-3xl font-bold text-primary-500 mb-2">
+        {totalCategories}
+      </div>
+      <div class="text-sm text-slate-600 dark:text-slate-400">
+        分类数量
+      </div>
+    </div>
+  </div>
+</section>

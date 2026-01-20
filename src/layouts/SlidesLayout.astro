@@ -1,0 +1,320 @@
+---
+import { siteConfig } from '@jet-w/astro-blog/config';
+import '@jet-w/astro-blog/styles/slides.css';
+
+export interface Props {
+  title: string;
+  description?: string;
+  theme?: string;
+  transition?: string;
+  controls?: boolean;
+  progress?: boolean;
+  center?: boolean;
+  hash?: boolean;
+  slideNumber?: boolean;
+  showBackButton?: boolean;
+}
+
+const {
+  title,
+  description = '',
+  theme = 'black',
+  transition = 'slide',
+  controls = true,
+  progress = true,
+  center = true,
+  hash = true,
+  slideNumber = false,
+  showBackButton = true,
+} = Astro.props;
+
+const fullTitle = `${title} | ${siteConfig.title}`;
+
+// Reveal.js 配置
+const revealConfig = JSON.stringify({
+  hash,
+  controls,
+  progress,
+  center,
+  transition,
+  slideNumber,
+  // Markdown 配置
+  markdown: {
+    smartypants: true,
+  },
+  // 插件配置
+  plugins: ['RevealMarkdown', 'RevealHighlight', 'RevealNotes', 'RevealMath'],
+});
+---
+
+<!DOCTYPE html>
+<html lang="zh-CN">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="description" content={description} />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
+    <meta name="generator" content={Astro.generator} />
+    <title>{fullTitle}</title>
+
+    <!-- Open Graph -->
+    <meta property="og:type" content="article" />
+    <meta property="og:title" content={fullTitle} />
+    <meta property="og:description" content={description} />
+
+    <!-- Reveal.js CSS -->
+    <link rel="stylesheet" href="/slides/reveal.css" />
+    <link rel="stylesheet" href={`/slides/theme/${theme}.css`} id="theme" />
+
+    <!-- Reveal.js 代码高亮主题 -->
+    <link rel="stylesheet" href="/slides/plugin/highlight/monokai.css" />
+
+    <!-- KaTeX for math -->
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.css" />
+
+    <!-- Mermaid 和 ECharts 在幻灯片中的样式 -->
+    <style>
+      .reveal .mermaid {
+        background: rgba(255, 255, 255, 0.95);
+        padding: 1em;
+        border-radius: 8px;
+      }
+      .reveal .echarts-container {
+        width: 100%;
+        height: 400px;
+        margin: 0 auto;
+      }
+      .reveal pre code.language-mermaid,
+      .reveal pre code.language-echarts {
+        display: none;
+      }
+    </style>
+  </head>
+  <body>
+    <div class="reveal">
+      <div class="slides">
+        <slot />
+      </div>
+    </div>
+
+    <!-- 返回按钮（仅在独立页面显示，嵌入模式通过 JS 隐藏） -->
+    <a href="#" class="slides-back-btn" id="slides-back-btn" title="返回上一级">
+      <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+        <path d="M19 12H5M12 19l-7-7 7-7"/>
+      </svg>
+    </a>
+
+    <!-- 检测嵌入模式并隐藏返回按钮，设置返回链接为父路径 -->
+    <script is:inline>
+      (function() {
+        var btn = document.getElementById('slides-back-btn');
+        if (!btn) return;
+
+        // 检查是否在 iframe 中或 URL 包含 embed=true
+        var isEmbed = window.self !== window.top ||
+                      window.location.search.indexOf('embed=true') !== -1;
+        if (isEmbed) {
+          btn.style.display = 'none';
+          return;
+        }
+
+        // 设置返回链接为父路径
+        var path = window.location.pathname;
+        // 移除末尾的斜杠
+        if (path.endsWith('/')) {
+          path = path.slice(0, -1);
+        }
+        // 获取父路径
+        var parentPath = path.substring(0, path.lastIndexOf('/'));
+        // 如果父路径为空，返回首页
+        btn.href = parentPath || '/';
+      })();
+    </script>
+
+    <!-- Reveal.js -->
+    <script is:inline src="/slides/reveal.js"></script>
+    <script is:inline src="/slides/plugin/markdown/markdown.js"></script>
+    <script is:inline src="/slides/plugin/highlight/highlight.js"></script>
+    <script is:inline src="/slides/plugin/notes/notes.js"></script>
+    <script is:inline src="/slides/plugin/math/math.js"></script>
+
+    <!-- Mermaid -->
+    <script is:inline src="https://cdn.jsdelivr.net/npm/mermaid@10/dist/mermaid.min.js"></script>
+
+    <!-- ECharts -->
+    <script is:inline src="https://cdn.jsdelivr.net/npm/echarts@5/dist/echarts.min.js"></script>
+
+    <!-- 初始化 Reveal.js -->
+    <script is:inline define:vars={{ revealConfig }}>
+      document.addEventListener('DOMContentLoaded', function() {
+        const config = JSON.parse(revealConfig);
+
+        Reveal.initialize({
+          hash: config.hash,
+          controls: config.controls,
+          progress: config.progress,
+          center: config.center,
+          transition: config.transition,
+          slideNumber: config.slideNumber,
+
+          // Markdown 配置
+          markdown: config.markdown,
+
+          // 数学公式配置
+          math: {
+            mathjax: null,
+            katex: 'https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.js',
+            katexScript: 'https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/contrib/auto-render.min.js',
+          },
+
+          // 插件
+          plugins: [RevealMarkdown, RevealHighlight, RevealNotes, RevealMath.KaTeX]
+        }).then(function() {
+          // Reveal.js 初始化完成后，渲染 Mermaid 和 ECharts
+          var mermaidContainers = [];
+          var echartsInstances = [];
+
+          // 初始化 Mermaid
+          if (typeof mermaid !== 'undefined') {
+            mermaid.initialize({
+              startOnLoad: false,
+              theme: 'default',
+              securityLevel: 'loose'
+            });
+
+            // 查找所有 mermaid 代码块并准备容器
+            document.querySelectorAll('pre code.language-mermaid, pre code.mermaid').forEach(function(block, index) {
+              var code = block.textContent;
+              var container = document.createElement('div');
+              container.className = 'mermaid';
+              container.id = 'mermaid-slide-' + index;
+              container.setAttribute('data-mermaid-code', code);
+              container.style.minHeight = '100px';
+
+              // 替换代码块
+              var pre = block.parentElement;
+              pre.parentElement.insertBefore(container, pre);
+              pre.style.display = 'none';
+
+              mermaidContainers.push({
+                container: container,
+                code: code,
+                rendered: false
+              });
+            });
+
+            // 渲染当前可见幻灯片中的 Mermaid
+            async function renderVisibleMermaid() {
+              var needsLayout = false;
+
+              mermaidContainers.forEach(function(item) {
+                if (item.rendered) return;
+
+                var section = item.container.closest('section');
+                if (section && (section.classList.contains('present') || section.closest('.present'))) {
+                  item.container.textContent = item.code;
+                  item.rendered = true;
+                  needsLayout = true;
+                }
+              });
+
+              // 渲染所有已标记的 Mermaid
+              var toRender = mermaidContainers.filter(function(item) {
+                return item.rendered && item.container.textContent;
+              }).map(function(item) {
+                return item.container;
+              });
+
+              if (toRender.length > 0) {
+                try {
+                  await mermaid.run({ nodes: toRender });
+                  // Mermaid 渲染完成后，通知 Reveal.js 重新计算布局
+                  if (needsLayout) {
+                    Reveal.layout();
+                  }
+                } catch(e) {
+                  console.warn('Mermaid render warning:', e);
+                }
+              }
+            }
+
+            // 初始渲染 - 使用更长的延迟确保 Reveal.js 完全初始化
+            setTimeout(renderVisibleMermaid, 200);
+
+            // 幻灯片切换时渲染
+            Reveal.on('slidechanged', function() {
+              setTimeout(renderVisibleMermaid, 50);
+            });
+          }
+
+          // 初始化 ECharts
+          if (typeof echarts !== 'undefined') {
+            document.querySelectorAll('pre code.language-echarts, pre code.echarts').forEach(function(block, index) {
+              try {
+                var code = block.textContent.trim();
+                var option = JSON.parse(code);
+
+                // 创建 ECharts 容器
+                var container = document.createElement('div');
+                container.className = 'echarts-container';
+                container.id = 'echarts-slide-' + index;
+                container.style.height = '400px';
+                container.style.width = '100%';
+
+                // 替换代码块
+                var pre = block.parentElement;
+                pre.parentElement.insertBefore(container, pre);
+                pre.style.display = 'none';
+
+                echartsInstances.push({
+                  container: container,
+                  option: option,
+                  chart: null,
+                  initialized: false
+                });
+              } catch (e) {
+                console.error('ECharts parsing error:', e);
+              }
+            });
+
+            // 渲染当前可见幻灯片中的 ECharts
+            function renderVisibleEcharts() {
+              echartsInstances.forEach(function(item) {
+                var section = item.container.closest('section');
+                var isVisible = section && (section.classList.contains('present') || section.closest('.present'));
+
+                if (isVisible) {
+                  if (!item.initialized) {
+                    item.chart = echarts.init(item.container);
+                    item.chart.setOption(item.option);
+                    item.initialized = true;
+                  } else if (item.chart) {
+                    item.chart.resize();
+                  }
+                }
+              });
+            }
+
+            // 初始渲染
+            setTimeout(renderVisibleEcharts, 100);
+
+            // 幻灯片切换时渲染/调整大小
+            Reveal.on('slidechanged', function() {
+              setTimeout(renderVisibleEcharts, 50);
+            });
+
+            // 监听窗口大小变化
+            window.addEventListener('resize', function() {
+              echartsInstances.forEach(function(item) {
+                if (item.chart) {
+                  item.chart.resize();
+                }
+              });
+            });
+          }
+
+        });
+      });
+    </script>
+  </body>
+</html>

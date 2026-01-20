@@ -1,0 +1,211 @@
+---
+import { getCollection } from 'astro:content';
+import PageLayout from '@jet-w/astro-blog/layouts/PageLayout.astro';
+import PostCard from '@jet-w/astro-blog/components/blog/PostCard.astro';
+import Pagination from '@jet-w/astro-blog/components/ui/Pagination.astro';
+
+export async function getStaticPaths() {
+  const postsPerPage = 10;
+  const allPosts = await getCollection('posts', ({ data }) => !data.draft);
+
+  // 从所有文章中收集标签
+  const tagMap = new Map<string, { name: string; posts: typeof allPosts }>();
+
+  allPosts.forEach(post => {
+    (post.data.tags || []).forEach(tag => {
+      const slug = tag.toLowerCase().replace(/\s+/g, '-');
+      if (tagMap.has(slug)) {
+        tagMap.get(slug)!.posts.push(post);
+      } else {
+        tagMap.set(slug, { name: tag, posts: [post] });
+      }
+    });
+  });
+
+  // 为每个标签的每一页生成路径
+  const paths: Array<{
+    params: { tag: string; page: string };
+    props: { tagSlug: string; tagName: string; page: number; totalPages: number };
+  }> = [];
+
+  tagMap.forEach(({ name, posts }, slug) => {
+    // 按日期排序
+    const sortedPosts = posts.sort((a, b) => {
+      const dateA = a.data.pubDate ? new Date(a.data.pubDate).getTime() : 0;
+      const dateB = b.data.pubDate ? new Date(b.data.pubDate).getTime() : 0;
+      return dateB - dateA;
+    });
+
+    const totalPages = Math.ceil(sortedPosts.length / postsPerPage);
+
+    // 为每一页生成路径（从第2页开始，第1页由 [tag].astro 处理）
+    for (let page = 2; page <= totalPages; page++) {
+      paths.push({
+        params: { tag: slug, page: page.toString() },
+        props: { tagSlug: slug, tagName: name, page, totalPages }
+      });
+    }
+  });
+
+  return paths;
+}
+
+const { tagSlug, tagName, page: currentPage, totalPages } = Astro.props;
+const postsPerPage = 10;
+
+// 获取所有文章并筛选包含该标签的文章
+const allPosts = await getCollection('posts', ({ data }) => !data.draft);
+
+// 筛选包含该标签的文章
+const filteredPosts = allPosts
+  .filter(post =>
+    (post.data.tags || []).some(t => t.toLowerCase().replace(/\s+/g, '-') === tagSlug)
+  )
+  .sort((a, b) => {
+    const dateA = a.data.pubDate ? new Date(a.data.pubDate).getTime() : 0;
+    const dateB = b.data.pubDate ? new Date(b.data.pubDate).getTime() : 0;
+    return dateB - dateA;
+  });
+
+// 分页逻辑
+const totalPosts = filteredPosts.length;
+const startIndex = (currentPage - 1) * postsPerPage;
+const endIndex = startIndex + postsPerPage;
+const posts = filteredPosts.slice(startIndex, endIndex);
+
+// 获取相关标签（从当前标签文章中提取其他标签）
+const relatedTagMap = new Map<string, { name: string; count: number }>();
+filteredPosts.forEach(post => {
+  (post.data.tags || []).forEach(t => {
+    const slug = t.toLowerCase().replace(/\s+/g, '-');
+    if (slug !== tagSlug) {
+      if (relatedTagMap.has(slug)) {
+        relatedTagMap.get(slug)!.count++;
+      } else {
+        relatedTagMap.set(slug, { name: t, count: 1 });
+      }
+    }
+  });
+});
+
+const relatedTags = Array.from(relatedTagMap.entries())
+  .map(([slug, { name, count }]) => ({ slug, name, count }))
+  .sort((a, b) => b.count - a.count)
+  .slice(0, 8);
+---
+
+<PageLayout
+  title={`标签: ${tagName} - 第 ${currentPage} 页`}
+  description={`浏览所有关于 ${tagName} 的文章 - 第 ${currentPage} 页`}
+  showSidebar={true}
+>
+  <!-- 面包屑导航 -->
+  <nav class="flex items-center space-x-2 text-sm text-slate-600 dark:text-slate-400 mb-8">
+    <a href="/" class="hover:text-primary-500 transition-colors">首页</a>
+    <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+      <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7" />
+    </svg>
+    <a href="/tags" class="hover:text-primary-500 transition-colors">标签</a>
+    <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+      <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7" />
+    </svg>
+    <a href={`/tags/${tagSlug}`} class="hover:text-primary-500 transition-colors">{tagName}</a>
+    <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+      <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7" />
+    </svg>
+    <span class="text-slate-900 dark:text-slate-100">第 {currentPage} 页</span>
+  </nav>
+
+  <!-- 页面头部 -->
+  <div class="text-center mb-12">
+    <div class="inline-flex items-center justify-center w-16 h-16 bg-primary-100 dark:bg-primary-900/30 rounded-full mb-4">
+      <svg class="w-8 h-8 text-primary-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 7h.01M7 3h5c.512 0 1.024.195 1.414.586l7 7a2 2 0 010 2.828l-7 7a2 2 0 01-2.828 0l-7-7A1.994 1.994 0 013 12V7a4 4 0 014-4z" />
+      </svg>
+    </div>
+
+    <h1 class="text-4xl font-bold text-slate-900 dark:text-slate-100 mb-4">
+      {tagName}
+    </h1>
+
+    <p class="text-xl text-slate-600 dark:text-slate-400 mb-8">
+      找到 {totalPosts} 篇关于 {tagName} 的文章
+    </p>
+
+    <!-- 标签统计 -->
+    <div class="inline-flex items-center space-x-6 text-sm text-slate-500 dark:text-slate-400 bg-slate-50 dark:bg-slate-800 px-6 py-3 rounded-lg">
+      <span>#{tagName}</span>
+      <span>•</span>
+      <span>{totalPosts} 篇文章</span>
+      <span>•</span>
+      <span>第 {currentPage} / {totalPages} 页</span>
+    </div>
+  </div>
+
+  <!-- 文章列表 -->
+  {posts.length > 0 ? (
+    <div class="space-y-8 mb-12">
+      {posts.map((post) => (
+        <PostCard
+          post={{
+            slug: post.id.toLowerCase(),
+            title: post.data.title,
+            description: post.data.description,
+            pubDate: post.data.pubDate,
+            tags: post.data.tags,
+            categories: post.data.categories,
+            author: post.data.author,
+            image: post.data.image
+          }}
+          layout="horizontal"
+        />
+      ))}
+    </div>
+  ) : (
+    <div class="text-center py-16">
+      <div class="text-6xl mb-4">📝</div>
+      <h3 class="text-xl font-semibold text-slate-900 dark:text-slate-100 mb-2">
+        暂无相关文章
+      </h3>
+      <p class="text-slate-600 dark:text-slate-400 mb-6">
+        目前还没有关于 {tagName} 的文章，请查看其他标签。
+      </p>
+      <a href="/tags" class="btn-secondary">
+        浏览所有标签
+      </a>
+    </div>
+  )}
+
+  <!-- 分页导航 -->
+  {totalPages > 1 && (
+    <Pagination
+      currentPage={currentPage}
+      totalPages={totalPages}
+      baseUrl={`/tags/${tagSlug}`}
+    />
+  )}
+
+  <!-- 相关标签 -->
+  {relatedTags.length > 0 && (
+    <section class="mt-16 pt-8 border-t border-slate-200 dark:border-slate-700">
+      <h2 class="text-2xl font-bold text-slate-900 dark:text-slate-100 mb-6">
+        相关标签
+      </h2>
+      <div class="flex flex-wrap gap-3">
+        {relatedTags.map((relatedTag) => (
+          <a
+            href={`/tags/${relatedTag.slug}`}
+            class="inline-flex items-center px-4 py-2 bg-white dark:bg-slate-800 border border-slate-300 dark:border-slate-600 rounded-lg hover:border-primary-300 dark:hover:border-primary-600 hover:shadow-md transition-all duration-200 group"
+          >
+            <span class="font-medium text-slate-900 dark:text-slate-100 group-hover:text-primary-500 transition-colors">
+              {relatedTag.name}
+            </span>
+            <span class="ml-2 text-xs px-2 py-1 bg-slate-100 dark:bg-slate-700 text-slate-600 dark:text-slate-400 rounded-full">
+              {relatedTag.count}
+            </span>
+          </a>
+        ))}
+      </div>
+    </section>
+  )}
+</PageLayout>

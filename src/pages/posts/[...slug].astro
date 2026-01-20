@@ -1,0 +1,335 @@
+---
+import { getCollection, type CollectionEntry, render } from 'astro:content';
+import PageLayout from '@jet-w/astro-blog/layouts/PageLayout.astro';
+import SlidesLayout from '@jet-w/astro-blog/layouts/SlidesLayout.astro';
+import FloatingToc from '@jet-w/astro-blog/components/blog/FloatingToc.vue';
+
+export async function getStaticPaths() {
+  const posts = await getCollection('posts');
+
+  // 按文件名称排序，readme.md 排在每个文件夹的最前面
+  const sortedPosts = posts.sort((a, b) => {
+    // 获取文件夹路径和文件名
+    const aDir = a.id.includes('/') ? a.id.substring(0, a.id.lastIndexOf('/')) : '';
+    const bDir = b.id.includes('/') ? b.id.substring(0, b.id.lastIndexOf('/')) : '';
+    const aFile = a.id.includes('/') ? a.id.substring(a.id.lastIndexOf('/') + 1) : a.id;
+    const bFile = b.id.includes('/') ? b.id.substring(b.id.lastIndexOf('/') + 1) : b.id;
+
+    // 先按文件夹排序
+    if (aDir !== bDir) {
+      return aDir.localeCompare(bDir);
+    }
+
+    // 同一文件夹内，readme 排最前面
+    const aIsReadme = aFile.toLowerCase() === 'readme' || aFile.toLowerCase() === 'readme.md';
+    const bIsReadme = bFile.toLowerCase() === 'readme' || bFile.toLowerCase() === 'readme.md';
+
+    if (aIsReadme && !bIsReadme) return -1;
+    if (!aIsReadme && bIsReadme) return 1;
+
+    // 其他文件按字母顺序排序
+    return aFile.localeCompare(bFile);
+  });
+
+  // 收集所有目录路径
+  const directories = new Set<string>();
+  posts.forEach(post => {
+    const parts = post.id.split('/');
+    let currentPath = '';
+    for (let i = 0; i < parts.length - 1; i++) {
+      currentPath = currentPath ? `${currentPath}/${parts[i]}` : parts[i];
+      directories.add(currentPath);
+    }
+  });
+
+  // 定义路径类型
+  type PathEntry = {
+    params: { slug: string };
+    props: {
+      post: CollectionEntry<'posts'> | null;
+      prevPost: CollectionEntry<'posts'> | null;
+      nextPost: CollectionEntry<'posts'> | null;
+      isDirectory: boolean;
+    };
+  };
+
+  // 生成文章路径
+  const paths: PathEntry[] = sortedPosts.map((post, index) => ({
+    params: { slug: post.id.toLowerCase() },
+    props: {
+      post,
+      prevPost: index > 0 ? sortedPosts[index - 1] : null,
+      nextPost: index < sortedPosts.length - 1 ? sortedPosts[index + 1] : null,
+      isDirectory: false,
+    },
+  }));
+
+  // 生成目录路径（查找对应的 README）
+  directories.forEach(dir => {
+    const readmePost = posts.find(post => {
+      const postId = post.id.toLowerCase();
+      return postId === `${dir.toLowerCase()}/readme` ||
+             postId === `${dir.toLowerCase()}/readme.md` ||
+             postId === `${dir.toLowerCase()}/readme.mdx`;
+    });
+
+    // 只有当目录路径不与现有文章冲突时才添加
+    const hasConflict = posts.some(post => post.id.toLowerCase() === dir.toLowerCase());
+    if (!hasConflict) {
+      paths.push({
+        params: { slug: dir.toLowerCase() },
+        props: {
+          post: readmePost || null,
+          prevPost: null,
+          nextPost: null,
+          isDirectory: true,
+        },
+      });
+    }
+  });
+
+  return paths;
+}
+
+type Props = {
+  post: CollectionEntry<'posts'> | null;
+  prevPost: CollectionEntry<'posts'> | null;
+  nextPost: CollectionEntry<'posts'> | null;
+  isDirectory?: boolean;
+};
+
+const { post, prevPost, nextPost, isDirectory } = Astro.props;
+const Content = post ? (await render(post)).Content : null;
+
+// 判断是否使用 slides 布局
+const isSlides = post?.data.layout === 'slides';
+
+// 解析 Markdown 为幻灯片结构（当 layout: slides 时）
+function parseSlides(markdown: string): string[][] {
+  const cleanMarkdown = markdown
+    .replace(/<!--[\s\S]*?-->/g, '')
+    .trim();
+  const horizontalSlides = cleanMarkdown.split(/\n---\n/);
+  return horizontalSlides.map((hSlide) => {
+    return hSlide.split(/\n----\n/).map(s => s.trim());
+  });
+}
+
+const slidesData = isSlides && post?.body ? parseSlides(post.body) : [];
+
+// 计算阅读时间（简单估算）
+const readingTime = post ? Math.ceil((post.body?.length || 0) / 1000) : 0;
+
+// 格式化日期
+const formatDate = (date: Date) => {
+  return new Intl.DateTimeFormat('zh-CN', {
+    year: 'numeric',
+    month: 'long',
+    day: 'numeric',
+  }).format(date);
+};
+---
+
+{post && isSlides ? (
+  <!-- Slides 布局 -->
+  <SlidesLayout
+    title={post.data.title}
+    description={post.data.description}
+    theme={post.data.theme}
+    transition={post.data.transition}
+    controls={post.data.controls}
+    progress={post.data.progress}
+    center={post.data.center}
+    slideNumber={post.data.slideNumber}
+  >
+    {slidesData.map((verticalSlides) => (
+      <section>
+        {verticalSlides.map((slideContent) => (
+          <section data-markdown>
+            <textarea data-template set:text={slideContent}></textarea>
+          </section>
+        ))}
+      </section>
+    ))}
+  </SlidesLayout>
+) : post ? (
+<PageLayout
+  title={post.data.title}
+  description={post.data.description}
+  showSidebar={true}
+>
+  <!-- 浮动目录 -->
+  <FloatingToc client:load />
+
+  <!-- 文章头部 -->
+  <article class="prose prose-slate dark:prose-invert max-w-none">
+    <!-- 标题区域 -->
+    <header class="not-prose mb-12">
+      <div class="text-center">
+        <h1 class="text-4xl md:text-5xl font-bold text-slate-900 dark:text-slate-100 mb-6 leading-tight">
+          {post.data.title}
+        </h1>
+
+        <p class="text-xl text-slate-600 dark:text-slate-400 mb-8 max-w-3xl mx-auto">
+          {post.data.description}
+        </p>
+
+        <!-- 文章元信息 -->
+        <div class="flex flex-wrap items-center justify-center gap-6 text-sm text-slate-500 dark:text-slate-400">
+          <div class="flex items-center space-x-2">
+            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" />
+            </svg>
+            <span>{post.data.author || '作者'}</span>
+          </div>
+
+          {post.data.pubDate && (
+            <div class="flex items-center space-x-2">
+              <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
+              </svg>
+              <time datetime={post.data.pubDate.toISOString()}>
+                {formatDate(post.data.pubDate)}
+              </time>
+            </div>
+          )}
+
+          <div class="flex items-center space-x-2">
+            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
+            </svg>
+            <span>约 {readingTime} 分钟阅读</span>
+          </div>
+        </div>
+
+        <!-- 标签 -->
+        {post.data.tags && post.data.tags.length > 0 && (
+          <div class="flex flex-wrap justify-center gap-2 mt-6">
+            {post.data.tags.map((tag) => (
+              <a
+                href={`/tags/${tag}`}
+                class="px-3 py-1 text-xs font-medium bg-primary-100 dark:bg-primary-900/30 text-primary-700 dark:text-primary-300 rounded-full hover:bg-primary-200 dark:hover:bg-primary-900/50 transition-colors"
+              >
+                #{tag}
+              </a>
+            ))}
+          </div>
+        )}
+      </div>
+
+      <!-- 封面图片 -->
+      {post.data.image && (
+        <div class="mt-12 rounded-xl overflow-hidden">
+          <img
+            src={post.data.image}
+            alt={post.data.title}
+            class="w-full h-64 md:h-96 object-cover"
+            loading="lazy"
+          />
+        </div>
+      )}
+    </header>
+
+    <!-- 文章内容 -->
+    <div class="prose prose-slate dark:prose-invert max-w-none prose-lg">
+      {Content && <Content />}
+    </div>
+
+    <!-- 文章底部 -->
+    <footer class="not-prose mt-16 pt-8 border-t border-slate-200 dark:border-slate-700">
+      <!-- 分类信息 -->
+      {post.data.categories && post.data.categories.length > 0 && (
+        <div class="mb-8">
+          <h3 class="text-lg font-semibold text-slate-900 dark:text-slate-100 mb-4">
+            分类
+          </h3>
+          <div class="flex flex-wrap gap-2">
+            {post.data.categories.map((category) => (
+              <a
+                href={`/categories/${category}`}
+                class="px-4 py-2 text-sm font-medium bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-300 rounded-lg hover:bg-slate-200 dark:hover:bg-slate-700 transition-colors"
+              >
+                {category}
+              </a>
+            ))}
+          </div>
+        </div>
+      )}
+
+      <!-- 更新时间 -->
+      {post.data.updatedDate && post.data.updatedDate !== post.data.pubDate && (
+        <div class="text-sm text-slate-500 dark:text-slate-400">
+          最后更新：{formatDate(post.data.updatedDate)}
+        </div>
+      )}
+    </footer>
+  </article>
+
+  <!-- 文章导航 -->
+  <nav class="mt-16 pt-8 border-t border-slate-200 dark:border-slate-700">
+    <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+      <!-- 上一篇 -->
+      <div class="text-center md:text-left">
+        <div class="text-sm text-slate-500 dark:text-slate-400 mb-2">上一篇</div>
+        {prevPost ? (
+          <a
+            href={`/posts/${prevPost.id.toLowerCase()}`}
+            class="group inline-flex items-center text-primary-500 hover:text-primary-600 dark:hover:text-primary-400 font-medium transition-colors"
+          >
+            <svg class="w-4 h-4 mr-2 group-hover:-translate-x-1 transition-transform" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7" />
+            </svg>
+            <span class="line-clamp-1">{prevPost.data.title}</span>
+          </a>
+        ) : (
+          <span class="text-slate-400 dark:text-slate-600">已经是第一篇了</span>
+        )}
+      </div>
+
+      <!-- 下一篇 -->
+      <div class="text-center md:text-right">
+        <div class="text-sm text-slate-500 dark:text-slate-400 mb-2">下一篇</div>
+        {nextPost ? (
+          <a
+            href={`/posts/${nextPost.id.toLowerCase()}`}
+            class="group inline-flex items-center justify-end text-primary-500 hover:text-primary-600 dark:hover:text-primary-400 font-medium transition-colors"
+          >
+            <span class="line-clamp-1">{nextPost.data.title}</span>
+            <svg class="w-4 h-4 ml-2 group-hover:translate-x-1 transition-transform" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7" />
+            </svg>
+          </a>
+        ) : (
+          <span class="text-slate-400 dark:text-slate-600">已经是最后一篇了</span>
+        )}
+      </div>
+    </div>
+  </nav>
+</PageLayout>
+) : (
+<PageLayout
+  title="目录"
+  description="此目录暂无内容"
+  showSidebar={true}
+>
+  <div class="text-center py-16">
+    <div class="inline-flex items-center justify-center w-20 h-20 bg-slate-100 dark:bg-slate-800 rounded-full mb-6">
+      <svg class="w-10 h-10 text-slate-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 7v10a2 2 0 002 2h14a2 2 0 002-2V9a2 2 0 00-2-2h-6l-2-2H5a2 2 0 00-2 2z" />
+      </svg>
+    </div>
+    <h1 class="text-2xl font-bold text-slate-900 dark:text-slate-100 mb-4">
+      此目录暂无内容
+    </h1>
+    <p class="text-slate-600 dark:text-slate-400 mb-8">
+      该目录下暂无 README 文件
+    </p>
+    <a href="/posts" class="inline-flex items-center px-4 py-2 bg-primary-500 text-white rounded-lg hover:bg-primary-600 transition-colors">
+      <svg class="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 19l-7-7m0 0l7-7m-7 7h18" />
+      </svg>
+      返回文章列表
+    </a>
+  </div>
+</PageLayout>
+)}

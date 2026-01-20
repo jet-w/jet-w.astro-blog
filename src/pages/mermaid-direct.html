@@ -1,0 +1,78 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <title>Direct Mermaid Test</title>
+  <meta charset="UTF-8">
+  <style>
+    body {
+      font-family: Arial, sans-serif;
+      max-width: 800px;
+      margin: 0 auto;
+      padding: 2rem;
+    }
+    .chart-container {
+      margin: 2rem 0;
+      padding: 1rem;
+      border: 2px solid #ddd;
+      border-radius: 8px;
+      background: #f9f9f9;
+    }
+  </style>
+</head>
+<body>
+  <h1>🧪 Direct Mermaid Test</h1>
+
+  <p><strong>Status:</strong> This is a direct HTML test to verify Mermaid works in this environment.</p>
+
+  <div class="chart-container">
+    <h3>Chart 1: Simple Flow</h3>
+    <div class="mermaid">
+graph TD
+    A[Start] --> B[Process]
+    B --> C[Decision]
+    C -->|Yes| D[Action 1]
+    C -->|No| E[Action 2]
+    D --> F[End]
+    E --> F
+    </div>
+  </div>
+
+  <div class="chart-container">
+    <h3>Chart 2: Process Flow</h3>
+    <div class="mermaid">
+graph LR
+    A[Input] --> B[Validate]
+    B --> C[Process]
+    C --> D[Output]
+    </div>
+  </div>
+
+  <!-- Load Mermaid from CDN -->
+  <script src="https://unpkg.com/mermaid@10.9.0/dist/mermaid.min.js"></script>
+  <script>
+    console.log('🚀 Initializing Mermaid directly...');
+
+    mermaid.initialize({
+      startOnLoad: true,
+      theme: 'default',
+      securityLevel: 'loose'
+    });
+
+    console.log('✅ Mermaid initialized and should render automatically');
+
+    // Check status after a delay
+    setTimeout(() => {
+      const svgs = document.querySelectorAll('.mermaid svg');
+      console.log(`📊 Found ${svgs.length} rendered SVG charts`);
+
+      if (svgs.length > 0) {
+        console.log('🎉 SUCCESS: Mermaid is working!');
+        document.body.style.borderTop = '5px solid green';
+      } else {
+        console.log('❌ FAILED: No SVG charts found');
+        document.body.style.borderTop = '5px solid red';
+      }
+    }, 2000);
+  </script>
+</body>
+</html>

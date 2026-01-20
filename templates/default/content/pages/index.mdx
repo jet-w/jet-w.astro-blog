@@ -1,0 +1,20 @@
+---
+title: 首页
+description: 1基于Astro构建的现代化技术博客，专注于分享前端开发、技术思考和学习笔记。
+---
+
+import Hero from '@jet-w/astro-blog/components/blog/Hero.astro';
+import StatsSection from '@jet-w/astro-blog/components/home/StatsSection.astro';
+import QuickNavSection from '@jet-w/astro-blog/components/home/QuickNavSection.astro';
+import FeaturedPostsSection from '@jet-w/astro-blog/components/home/FeaturedPostsSection.astro';
+import RecentPostsSection from '@jet-w/astro-blog/components/home/RecentPostsSection.astro';
+
+<Hero />
+
+<StatsSection />
+
+<QuickNavSection />
+
+<FeaturedPostsSection count={3} />
+
+<RecentPostsSection count={3} />

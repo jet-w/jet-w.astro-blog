@@ -1,0 +1,220 @@
+/* Slides 专用样式 */
+
+/* 返回按钮 */
+.slides-back-btn {
+  position: fixed;
+  top: 20px;
+  left: 20px;
+  z-index: 100;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 40px;
+  height: 40px;
+  background: rgba(0, 0, 0, 0.5);
+  border-radius: 50%;
+  color: white;
+  text-decoration: none;
+  opacity: 0.6;
+  transition: opacity 0.3s, transform 0.3s;
+}
+
+.slides-back-btn:hover {
+  opacity: 1;
+  transform: scale(1.1);
+}
+
+/* Reveal.js 自定义样式 */
+.reveal {
+  font-family: 'Source Sans Pro', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+}
+
+/* 代码块样式增强 */
+.reveal pre {
+  width: 100%;
+  max-width: 100%;
+  box-shadow: 0 4px 6px rgba(0, 0, 0, 0.3);
+}
+
+.reveal pre code {
+  max-height: 500px;
+  padding: 1em;
+  font-size: 0.9em;
+  line-height: 1.5;
+}
+
+/* 表格样式 */
+.reveal table {
+  margin: 1em auto;
+  border-collapse: collapse;
+}
+
+.reveal table th,
+.reveal table td {
+  padding: 0.5em 1em;
+  border: 1px solid rgba(255, 255, 255, 0.3);
+}
+
+.reveal table th {
+  background: rgba(255, 255, 255, 0.1);
+  font-weight: bold;
+}
+
+/* 列表样式 */
+.reveal ul,
+.reveal ol {
+  text-align: left;
+  display: inline-block;
+}
+
+.reveal li {
+  margin: 0.5em 0;
+}
+
+/* 链接样式 */
+.reveal a {
+  text-decoration: underline;
+  text-decoration-style: dotted;
+}
+
+.reveal a:hover {
+  text-decoration-style: solid;
+}
+
+/* 引用块样式 */
+.reveal blockquote {
+  width: 90%;
+  padding: 1em;
+  font-style: italic;
+  background: rgba(255, 255, 255, 0.05);
+  border-left: 4px solid currentColor;
+  text-align: left;
+}
+
+/* 分栏布局支持 */
+.reveal .columns {
+  display: flex;
+  gap: 2em;
+}
+
+.reveal .columns > * {
+  flex: 1;
+}
+
+/* 幻灯片过渡动画优化 */
+.reveal .slides section {
+  transition: all 0.4s ease;
+}
+
+/* 概览模式当前幻灯片高亮 */
+.reveal.overview .slides section.present {
+  outline: 4px solid #42affa !important;
+  outline-offset: 4px;
+  box-shadow: 0 0 30px rgba(66, 175, 250, 0.6), 0 0 60px rgba(66, 175, 250, 0.3) !important;
+}
+
+/* 概览模式其他幻灯片变暗 */
+.reveal.overview .slides section:not(.present) {
+  opacity: 0.6;
+}
+
+.reveal.overview .slides section:not(.present):hover {
+  opacity: 0.9;
+}
+
+/* 进度条自定义 */
+.reveal .progress {
+  height: 4px;
+}
+
+/* 控制按钮自定义 */
+.reveal .controls {
+  bottom: 30px;
+}
+
+/* 演讲者备注提示 */
+.reveal .speaker-notes-link {
+  position: fixed;
+  bottom: 20px;
+  right: 20px;
+  z-index: 100;
+  padding: 8px 16px;
+  background: rgba(0, 0, 0, 0.6);
+  color: white;
+  border-radius: 4px;
+  font-size: 12px;
+  opacity: 0.4;
+  transition: opacity 0.3s;
+}
+
+.reveal .speaker-notes-link:hover {
+  opacity: 1;
+}
+
+/* Mermaid 图表容器 */
+.reveal .mermaid {
+  background: rgba(255, 255, 255, 0.95);
+  padding: 1em;
+  border-radius: 8px;
+}
+
+/* 数学公式样式 */
+.reveal .katex {
+  font-size: 1.1em;
+}
+
+.reveal .katex-display {
+  margin: 1em 0;
+}
+
+/* Fragment 动画增强 */
+.reveal .fragment.fade-in-then-out {
+  opacity: 0;
+  visibility: hidden;
+}
+
+.reveal .fragment.fade-in-then-out.visible {
+  opacity: 1;
+  visibility: visible;
+}
+
+.reveal .fragment.fade-in-then-out.current-fragment {
+  opacity: 1;
+  visibility: visible;
+}
+
+/* 高亮样式 */
+.reveal .highlight {
+  background: linear-gradient(120deg, rgba(255, 255, 0, 0.3) 0%, rgba(255, 255, 0, 0.3) 100%);
+  padding: 0.1em 0.3em;
+  border-radius: 3px;
+}
+
+/* 响应式优化 */
+@media (max-width: 768px) {
+  .slides-back-btn {
+    width: 36px;
+    height: 36px;
+    top: 10px;
+    left: 10px;
+  }
+
+  .reveal pre code {
+    font-size: 0.7em;
+  }
+
+  .reveal h1 {
+    font-size: 1.8em;
+  }
+
+  .reveal h2 {
+    font-size: 1.4em;
+  }
+}
+
+/* 打印样式 */
+@media print {
+  .slides-back-btn {
+    display: none;
+  }
+}
