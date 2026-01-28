@@ -1,6 +1,9 @@
 ---
 import { siteConfig } from '@jet-w/astro-blog/config';
 import '@jet-w/astro-blog/styles/slides.css';
+import type { I18nConfig } from '../config/i18n';
+import { defaultI18nConfig } from '../config/i18n';
+import { getLocaleFromPath, getLocaleConfig } from '../utils/i18n';
 
 export interface Props {
   title: string;
@@ -13,6 +16,7 @@ export interface Props {
   hash?: boolean;
   slideNumber?: boolean;
   showBackButton?: boolean;
+  i18nConfig?: I18nConfig;
 }
 
 const {
@@ -26,9 +30,17 @@ const {
   hash = true,
   slideNumber = false,
   showBackButton = true,
+  i18nConfig = defaultI18nConfig,
 } = Astro.props;
 
-const fullTitle = `${title} | ${siteConfig.title}`;
+// Get current locale
+const currentLocale = getLocaleFromPath(Astro.url.pathname, i18nConfig);
+const localeConfig = getLocaleConfig(currentLocale, i18nConfig);
+const localeData = localeConfig.locale;
+const localeSiteConfig = localeConfig.site;
+
+const siteTitle = localeSiteConfig.title || siteConfig.title;
+const fullTitle = `${title} | ${siteTitle}`;
 
 // Reveal.js 配置
 const revealConfig = JSON.stringify({
@@ -48,7 +60,7 @@ const revealConfig = JSON.stringify({
 ---
 
 <!DOCTYPE html>
-<html lang="zh-CN">
+<html lang={localeData.htmlLang}>
   <head>
     <meta charset="UTF-8" />
     <meta name="description" content={description} />

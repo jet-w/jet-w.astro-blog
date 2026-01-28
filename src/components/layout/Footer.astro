@@ -1,5 +1,22 @@
 ---
 import { siteConfig, footerConfig, defaultIcons } from '@jet-w/astro-blog/config';
+import type { I18nConfig } from '../../config/i18n';
+import { defaultI18nConfig } from '../../config/i18n';
+import { getLocaleFromPath, getLocaleConfig, getLocalePrefix } from '../../utils/i18n';
+
+export interface Props {
+  i18nConfig?: I18nConfig;
+}
+
+const { i18nConfig = defaultI18nConfig } = Astro.props;
+
+const currentLocale = getLocaleFromPath(Astro.url.pathname, i18nConfig);
+const localeConfig = getLocaleConfig(currentLocale, i18nConfig);
+const ui = localeConfig.ui;
+
+// Use locale-specific configs
+const localeSiteConfig = localeConfig.site;
+const localeFooterConfig = localeConfig.footer;
 
 const currentYear = new Date().getFullYear();
 
@@ -7,43 +24,44 @@ function getIcon(link: { type: string; icon?: string }): string {
   return link.icon || defaultIcons[link.type] || '';
 }
 
-// 替换版权信息中的占位符
-const copyright = footerConfig.copyright
+// Get locale prefix for RSS link
+const localePrefix = getLocalePrefix(currentLocale, i18nConfig);
+const rssUrl = localeFooterConfig.rssUrl || footerConfig.rssUrl || `${localePrefix}/rss.xml`;
+
+const copyright = (localeFooterConfig.copyright || footerConfig.copyright)
   .replace('{year}', String(currentYear))
-  .replace('{author}', siteConfig.author);
+  .replace('{author}', localeSiteConfig.author || siteConfig.author);
 ---
 
 <footer class="bg-slate-50 dark:bg-slate-800 border-t border-slate-200 dark:border-slate-700 mt-auto w-full min-w-0">
   <div class="container mx-auto px-4 py-6">
     <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
-      <!-- 站点信息 -->
       <div>
         <div class="flex items-center space-x-3 mb-3">
-          {siteConfig.avatar && (
+          {(localeSiteConfig.avatar || siteConfig.avatar) && (
             <img
-              src={siteConfig.avatar}
-              alt={siteConfig.title}
+              src={localeSiteConfig.avatar || siteConfig.avatar}
+              alt={localeSiteConfig.title || siteConfig.title}
               class="w-8 h-8 rounded-full"
             />
           )}
           <div>
             <h3 class="text-base font-semibold text-slate-900 dark:text-slate-100">
-              {siteConfig.title}
+              {localeSiteConfig.title || siteConfig.title}
             </h3>
             <p class="text-xs text-slate-600 dark:text-slate-400">
-              {siteConfig.description}
+              {localeSiteConfig.description || siteConfig.description}
             </p>
           </div>
         </div>
       </div>
 
-      <!-- 快速链接 -->
       <div>
         <h4 class="text-sm font-semibold text-slate-900 dark:text-slate-100 mb-3">
-          {footerConfig.quickLinksTitle}
+          {localeFooterConfig.quickLinksTitle || footerConfig.quickLinksTitle || ui.quickLinks}
         </h4>
         <div class="flex flex-wrap gap-x-4 gap-y-1">
-          {footerConfig.quickLinks.map((item) => (
+          {(localeFooterConfig.quickLinks || footerConfig.quickLinks).map((item) => (
             <a
               href={item.href}
               class="text-sm text-slate-600 dark:text-slate-400 hover:text-primary-500 transition-colors"
@@ -54,13 +72,12 @@ const copyright = footerConfig.copyright
         </div>
       </div>
 
-      <!-- 社交链接 -->
       <div>
         <h4 class="text-sm font-semibold text-slate-900 dark:text-slate-100 mb-3">
-          {footerConfig.contactTitle}
+          {localeFooterConfig.contactTitle || footerConfig.contactTitle || ui.contact}
         </h4>
         <div class="flex space-x-4">
-          {footerConfig.socialLinks.map((link) => (
+          {(localeFooterConfig.socialLinks || footerConfig.socialLinks).map((link) => (
             <a
               href={link.url}
               target={link.type === 'email' ? undefined : '_blank'}
@@ -74,11 +91,11 @@ const copyright = footerConfig.copyright
             </a>
           ))}
 
-          {footerConfig.showRss && (
+          {(localeFooterConfig.showRss ?? footerConfig.showRss) && (
             <a
-              href={footerConfig.rssUrl}
+              href={rssUrl}
               class="text-slate-600 dark:text-slate-400 hover:text-primary-500 transition-colors"
-              aria-label="RSS订阅"
+              aria-label={ui.rssFeed}
             >
               <svg class="w-5 h-5" fill="currentColor" viewBox="0 0 24 24">
                 <path d="M3.429 2.486c9.36 0 16.943 7.583 16.943 16.943h-3.257c0-7.563-6.123-13.686-13.686-13.686V2.486zM3.429 9.114c5.647 0 10.229 4.581 10.229 10.229h-3.257c0-3.844-3.128-6.972-6.972-6.972V9.114zM6.686 16.486c0 1.8-1.457 3.257-3.257 3.257S0.172 18.286 0.172 16.486s1.457-3.257 3.257-3.257 3.257 1.457 3.257 3.257z"/>
@@ -89,12 +106,11 @@ const copyright = footerConfig.copyright
       </div>
     </div>
 
-    <!-- 版权信息 -->
     <div class="border-t border-slate-200 dark:border-slate-700 pt-4 mt-6">
       <div class="flex flex-col sm:flex-row justify-between items-center text-sm text-slate-600 dark:text-slate-400">
         <p>{copyright}</p>
         <p class="mt-2 sm:mt-0">
-          Powered by <a href={footerConfig.poweredBy.url} class="link" target="_blank" rel="noopener noreferrer">{footerConfig.poweredBy.text}</a>
+          Powered by <a href={(localeFooterConfig.poweredBy || footerConfig.poweredBy).url} class="link" target="_blank" rel="noopener noreferrer">{(localeFooterConfig.poweredBy || footerConfig.poweredBy).text}</a>
         </p>
       </div>
     </div>

@@ -8,6 +8,17 @@ export { sidebarConfig, defaultSidebarConfig, defineSidebarConfig } from './side
 export { defaultIcons, socialLinks, defaultSocialLinks, defineSocialLinks } from './social';
 export { footerConfig, defaultFooterConfig, defineFooterConfig } from './footer';
 
+// i18n exports
+export {
+  defaultI18nConfig,
+  defineI18nConfig,
+  getUITranslations,
+  builtInTranslations,
+  zhCNTranslations,
+  enTranslations,
+  defaultLocales,
+} from './i18n';
+
 export type {
   SidebarConfig,
   SidebarGroup,
@@ -20,3 +31,12 @@ export type {
 } from './sidebar';
 export type { SocialLink } from './social';
 export type { FooterConfig, FooterLink } from './footer';
+
+// i18n types
+export type {
+  I18nConfig,
+  Locale,
+  LocaleConfig,
+  UITranslations,
+  I18nRoutingConfig,
+} from './i18n';

@@ -1,13 +1,19 @@
 /**
  * Sidebar Configuration
  *
- * Configure sidebar display options, groups, and widgets
+ * Configure sidebar display options, groups, and widgets.
+ *
+ * NOTE: For multi-language support, sidebar groups (with titles)
+ * should be configured in astro.config.mjs under localeConfigs.
+ * This file contains shared settings that are not language-specific.
  */
 
 import type { SidebarConfig } from '@jet-w/astro-blog';
 
 /**
- * Sidebar configuration
+ * Sidebar configuration (shared settings)
+ *
+ * Language-specific groups are configured in astro.config.mjs
  */
 export const sidebarConfig: SidebarConfig = {
   enabled: true,
@@ -20,14 +26,6 @@ export const sidebarConfig: SidebarConfig = {
   archivesCount: 6,
   showFriendLinks: false,
   friendLinks: [],
-  groups: [
-    {
-      type: 'scan',
-      title: '博客指南',
-      icon: 'ri:book-open-line',
-      scanPath: 'blog_docs',
-      collapsed: true,
-      showForPaths: ['/posts/blog_docs/**']
-    }
-  ]
+  // Groups are configured per-language in astro.config.mjs localeConfigs
+  groups: []
 };

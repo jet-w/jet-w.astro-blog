@@ -3,37 +3,69 @@ import { siteConfig } from '@jet-w/astro-blog/config';
 import ThemeToggle from '../ui/ThemeToggle.vue';
 import SearchBox from '../ui/SearchBox.vue';
 import MobileMenu from '../ui/MobileMenu.vue';
+import LanguageSwitcher from '../ui/LanguageSwitcher.vue';
+import type { I18nConfig } from '../../config/i18n';
+import { defaultI18nConfig } from '../../config/i18n';
+import {
+  getLocaleFromPath,
+  getLocaleConfig,
+  removeLocalePrefix,
+  isMultiLanguageEnabled,
+} from '../../utils/i18n';
+
+export interface Props {
+  i18nConfig?: I18nConfig;
+}
+
+const { i18nConfig = defaultI18nConfig } = Astro.props;
 
 const currentPath = Astro.url.pathname;
+const currentLocale = getLocaleFromPath(currentPath, i18nConfig);
+const localeConfig = getLocaleConfig(currentLocale, i18nConfig);
+const ui = localeConfig.ui;
+
+// Use locale-specific site config and menu
+const localeSiteConfig = localeConfig.site;
+const menu = localeConfig.menu;
+
+// Get base path without locale prefix for language switcher
+const basePath = removeLocalePrefix(currentPath, i18nConfig);
+
+// Check if multi-language is enabled
+const showLanguageSwitcher = isMultiLanguageEnabled(i18nConfig);
+
+// Prepare locales for language switcher
+const localesForSwitcher = i18nConfig.locales.map(l => ({
+  code: l.code,
+  name: l.name,
+}));
 ---
 
 <header class="sticky top-0 z-50 bg-white/80 dark:bg-slate-900/80 backdrop-blur-sm border-b border-slate-200 dark:border-slate-700">
   <div class="container mx-auto px-4">
     <nav class="flex items-center justify-between h-16">
-      <!-- Logo 和站点名称 -->
       <div class="flex items-center space-x-4">
         <a href="/" class="flex items-center space-x-3 hover:opacity-80 transition-opacity">
-          {siteConfig.avatar && (
+          {(localeSiteConfig.avatar || siteConfig.avatar) && (
             <img
-              src={siteConfig.avatar}
-              alt={siteConfig.title}
+              src={localeSiteConfig.avatar || siteConfig.avatar}
+              alt={localeSiteConfig.title || siteConfig.title}
               class="w-8 h-8 rounded-full"
             />
           )}
           <div class="hidden sm:block">
             <h1 class="text-xl font-bold text-slate-900 dark:text-slate-100">
-              {siteConfig.title}
+              {localeSiteConfig.title || siteConfig.title}
             </h1>
             <p class="text-xs text-slate-600 dark:text-slate-400 -mt-1">
-              技术博客
+              {localeSiteConfig.description || siteConfig.description}
             </p>
           </div>
         </a>
       </div>
 
-      <!-- 桌面端导航 -->
       <div class="hidden md:flex items-center space-x-8">
-        {siteConfig.menu.map((item) => (
+        {menu.map((item) => (
           <a
             href={item.href}
             class={`text-sm font-medium transition-colors hover:text-primary-500 ${
@@ -47,20 +79,42 @@ const currentPath = Astro.url.pathname;
         ))}
       </div>
 
-      <!-- 右侧功能区 -->
       <div class="flex items-center">
-        <!-- 搜索框 -->
         <div class="hidden sm:block mr-2">
-          <SearchBox client:load />
+          <SearchBox
+            client:load
+            placeholder={ui.searchPlaceholder}
+            searchLabel={ui.search}
+          />
         </div>
 
+        {showLanguageSwitcher && (
+          <div class="hidden sm:block mr-2">
+            <LanguageSwitcher
+              client:load
+              locales={localesForSwitcher}
+              currentLocale={currentLocale}
+              currentPath={basePath}
+              defaultLocale={i18nConfig.defaultLocale}
+              prefixDefaultLocale={i18nConfig.routing.prefixDefaultLocale}
+            />
+          </div>
+        )}
+
         <div class="hidden sm:block mr-2">
-          <!-- 主题切换 -->
           <ThemeToggle client:load />
         </div>
-        <!-- 移动端菜单 -->
+
         <div class="md:hidden">
-          <MobileMenu client:load navigation={siteConfig.menu} />
+          <MobileMenu
+            client:load
+            navigation={menu}
+            locales={showLanguageSwitcher ? localesForSwitcher : []}
+            currentLocale={currentLocale}
+            currentPath={basePath}
+            defaultLocale={i18nConfig.defaultLocale}
+            prefixDefaultLocale={i18nConfig.routing.prefixDefaultLocale}
+          />
         </div>
       </div>
     </nav>

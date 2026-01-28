@@ -1,7 +1,6 @@
 ---
 import { getCollection } from 'astro:content';
 import Icon from '../ui/Icon.astro';
-import { sidebarConfig } from '@jet-w/astro-blog/config';
 import {
   processSidebarConfig,
   getRecentPosts,
@@ -9,12 +8,25 @@ import {
   getArchives,
   filterGroupsByPath,
 } from '@jet-w/astro-blog/utils/sidebar';
+import type { I18nConfig } from '../../config/i18n';
+import { defaultI18nConfig } from '../../config/i18n';
+import { getLocaleFromPath, getLocaleConfig, getLocalePrefix, formatDate } from '../../utils/i18n';
 
 interface Props {
   currentPath?: string;
+  i18nConfig?: I18nConfig;
 }
 
-const { currentPath = Astro.url.pathname } = Astro.props;
+const { currentPath = Astro.url.pathname, i18nConfig = defaultI18nConfig } = Astro.props;
+
+// Get current locale and translations
+const currentLocale = getLocaleFromPath(currentPath, i18nConfig);
+const localeConfig = getLocaleConfig(currentLocale, i18nConfig);
+const ui = localeConfig.ui;
+const localePrefix = getLocalePrefix(currentLocale, i18nConfig);
+
+// Get locale-specific sidebar config (already merged with defaults in getLocaleConfig)
+const sidebarConfig = localeConfig.sidebar;
 
 // 获取所有文章
 const allPosts = await getCollection('posts', ({ data }) => !data.draft);
@@ -362,17 +374,17 @@ const archives = sidebarConfig.showArchives
     )
   ))}
 
-  {/* 最新文章 */}
+  {/* Recent Posts */}
   {sidebarConfig.showRecentPosts && recentPosts.length > 0 && (
     <section>
       <h3 class="text-lg font-semibold text-slate-900 dark:text-slate-100 mb-4 border-b border-slate-200 dark:border-slate-700 pb-2">
-        最新文章
+        {ui.recentPosts}
       </h3>
       <div class="space-y-3">
         {recentPosts.map((post) => (
           <article class="group">
             <a
-              href={`/posts/${post.id.toLowerCase()}`}
+              href={`${localePrefix}/posts/${post.id.toLowerCase()}`}
               class="block p-3 rounded-lg hover:bg-slate-50 dark:hover:bg-slate-800 transition-colors"
             >
               <h4 class="text-sm font-medium text-slate-900 dark:text-slate-100 group-hover:text-primary-500 line-clamp-2 mb-1">
@@ -380,7 +392,7 @@ const archives = sidebarConfig.showArchives
               </h4>
               {post.data.pubDate && (
                 <time class="text-xs text-slate-500 dark:text-slate-400">
-                  {new Date(post.data.pubDate).toLocaleDateString('zh-CN')}
+                  {formatDate(post.data.pubDate, localeConfig.locale.dateLocale)}
                 </time>
               )}
             </a>
@@ -390,16 +402,16 @@ const archives = sidebarConfig.showArchives
     </section>
   )}
 
-  {/* 热门标签 */}
+  {/* Popular Tags */}
   {sidebarConfig.showPopularTags && popularTags.length > 0 && (
     <section>
       <h3 class="text-lg font-semibold text-slate-900 dark:text-slate-100 mb-4 border-b border-slate-200 dark:border-slate-700 pb-2">
-        热门标签
+        {ui.popularTags}
       </h3>
       <div class="flex flex-wrap gap-2">
         {popularTags.map((tag) => (
           <a
-            href={`/tags/${tag.slug}`}
+            href={`${localePrefix}/tags/${tag.slug}`}
             class="inline-flex items-center px-3 py-1 rounded-full text-xs font-medium bg-primary-100 dark:bg-primary-900/30 text-primary-700 dark:text-primary-300 hover:bg-primary-200 dark:hover:bg-primary-900/50 transition-colors"
             style={`font-size: ${Math.min(14, 10 + tag.count * 0.5)}px`}
           >
@@ -411,20 +423,20 @@ const archives = sidebarConfig.showArchives
     </section>
   )}
 
-  {/* 归档 */}
+  {/* Archives */}
   {sidebarConfig.showArchives && archives.length > 0 && (
     <section>
       <h3 class="text-lg font-semibold text-slate-900 dark:text-slate-100 mb-4 border-b border-slate-200 dark:border-slate-700 pb-2">
-        文章归档
+        {ui.archives}
       </h3>
       <div class="space-y-2">
         {archives.map((archive) => (
           <a
-            href={`/archives/${archive.year}/${String(archive.month).padStart(2, '0')}`}
+            href={`${localePrefix}/archives/${archive.year}/${String(archive.month).padStart(2, '0')}`}
             class="flex items-center justify-between p-2 rounded-lg hover:bg-slate-50 dark:hover:bg-slate-800 transition-colors group"
           >
             <span class="text-sm text-slate-700 dark:text-slate-300 group-hover:text-primary-500">
-              {archive.year}年{archive.month}月
+              {new Date(archive.year, archive.month - 1).toLocaleDateString(localeConfig.locale.dateLocale, { year: 'numeric', month: 'long' })}
             </span>
             <span class="text-xs text-slate-500 dark:text-slate-400 bg-slate-100 dark:bg-slate-700 px-2 py-1 rounded-full">
               {archive.count}
@@ -435,11 +447,11 @@ const archives = sidebarConfig.showArchives
     </section>
   )}
 
-  {/* 友情链接 */}
+  {/* Friend Links */}
   {sidebarConfig.showFriendLinks && sidebarConfig.friendLinks && sidebarConfig.friendLinks.length > 0 && (
     <section>
       <h3 class="text-lg font-semibold text-slate-900 dark:text-slate-100 mb-4 border-b border-slate-200 dark:border-slate-700 pb-2">
-        友情链接
+        {ui.friendLinks}
       </h3>
       <div class="space-y-2">
         {sidebarConfig.friendLinks.map((link) => (

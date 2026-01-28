@@ -2,11 +2,19 @@
  * @jet-w/astro-blog Integration
  *
  * This integration injects the blog pages into your Astro project
+ * with multi-language support.
  */
 
 import type { AstroIntegration } from 'astro';
+import type { Plugin } from 'vite';
 import { fileURLToPath } from 'node:url';
 import path from 'node:path';
+import type { I18nConfig } from './config/i18n';
+import { defaultI18nConfig } from './config/i18n';
+
+// Virtual module ID for i18n config
+const VIRTUAL_I18N_MODULE_ID = 'virtual:astro-blog-i18n';
+const RESOLVED_VIRTUAL_I18N_MODULE_ID = '\0' + VIRTUAL_I18N_MODULE_ID;
 
 export interface AstroBlogIntegrationOptions {
   /**
@@ -21,6 +29,11 @@ export interface AstroBlogIntegrationOptions {
     search?: boolean;
     rss?: boolean;
   };
+
+  /**
+   * i18n configuration for multi-language support
+   */
+  i18n?: I18nConfig;
 }
 
 const defaultOptions: AstroBlogIntegrationOptions = {
@@ -35,6 +48,19 @@ const defaultOptions: AstroBlogIntegrationOptions = {
   },
 };
 
+/**
+ * Get the locale prefix for a given locale
+ */
+function getLocalePrefix(locale: string, i18nConfig: I18nConfig): string {
+  if (
+    locale === i18nConfig.defaultLocale &&
+    !i18nConfig.routing.prefixDefaultLocale
+  ) {
+    return '';
+  }
+  return `/${locale}`;
+}
+
 export function astroBlogIntegration(
   options: AstroBlogIntegrationOptions = {}
 ): AstroIntegration {
@@ -43,125 +69,148 @@ export function astroBlogIntegration(
     routes: { ...defaultOptions.routes, ...options.routes },
   };
 
+  const i18nConfig = options.i18n || defaultI18nConfig;
+
   // Get the directory where the integration is located
   const currentDir = path.dirname(fileURLToPath(import.meta.url));
   // Pages are in src/pages relative to dist
   const pagesDir = path.resolve(currentDir, '../src/pages');
 
+  // Create Vite plugin for virtual module
+  const vitePluginI18nConfig = (): Plugin => ({
+    name: 'astro-blog-i18n-config',
+    resolveId(id) {
+      if (id === VIRTUAL_I18N_MODULE_ID) {
+        return RESOLVED_VIRTUAL_I18N_MODULE_ID;
+      }
+    },
+    load(id) {
+      if (id === RESOLVED_VIRTUAL_I18N_MODULE_ID) {
+        return `export const i18nConfig = ${JSON.stringify(i18nConfig)};`;
+      }
+    },
+  });
+
   return {
     name: '@jet-w/astro-blog',
     hooks: {
-      'astro:config:setup': ({ injectRoute, logger }) => {
+      'astro:config:setup': ({ injectRoute, logger, updateConfig }) => {
         logger.info('Injecting @jet-w/astro-blog routes...');
 
+        // Add Vite plugin for virtual i18n module
+        updateConfig({
+          vite: {
+            plugins: [vitePluginI18nConfig()],
+          },
+        });
+
         const routes = mergedOptions.routes!;
+        const locales = i18nConfig.locales;
+
+        // Helper function to inject route for all locales
+        const injectLocalizedRoute = (
+          pattern: string,
+          entrypoint: string
+        ) => {
+          for (const locale of locales) {
+            const prefix = getLocalePrefix(locale.code, i18nConfig);
+            const localizedPattern = prefix ? `${prefix}${pattern}` : pattern;
+
+            injectRoute({
+              pattern: localizedPattern,
+              entrypoint,
+            });
+          }
+        };
 
         // Posts routes
         if (routes.posts) {
-          injectRoute({
-            pattern: '/posts',
-            entrypoint: `${pagesDir}/posts/index.astro`,
-          });
-          injectRoute({
-            pattern: '/posts/page/[page]',
-            entrypoint: `${pagesDir}/posts/page/[page].astro`,
-          });
-          injectRoute({
-            pattern: '/posts/[...slug]',
-            entrypoint: `${pagesDir}/posts/[...slug].astro`,
-          });
+          injectLocalizedRoute('/posts', `${pagesDir}/posts/index.astro`);
+          injectLocalizedRoute(
+            '/posts/page/[page]',
+            `${pagesDir}/posts/page/[page].astro`
+          );
+          injectLocalizedRoute(
+            '/posts/[...slug]',
+            `${pagesDir}/posts/[...slug].astro`
+          );
         }
 
         // Tags routes
         if (routes.tags) {
-          injectRoute({
-            pattern: '/tags',
-            entrypoint: `${pagesDir}/tags/index.astro`,
-          });
-          injectRoute({
-            pattern: '/tags/[tag]',
-            entrypoint: `${pagesDir}/tags/[tag].astro`,
-          });
-          injectRoute({
-            pattern: '/tags/[tag]/page/[page]',
-            entrypoint: `${pagesDir}/tags/[tag]/page/[page].astro`,
-          });
+          injectLocalizedRoute('/tags', `${pagesDir}/tags/index.astro`);
+          injectLocalizedRoute('/tags/[tag]', `${pagesDir}/tags/[tag].astro`);
+          injectLocalizedRoute(
+            '/tags/[tag]/page/[page]',
+            `${pagesDir}/tags/[tag]/page/[page].astro`
+          );
         }
 
         // Categories routes
         if (routes.categories) {
-          injectRoute({
-            pattern: '/categories',
-            entrypoint: `${pagesDir}/categories/index.astro`,
-          });
-          injectRoute({
-            pattern: '/categories/[category]',
-            entrypoint: `${pagesDir}/categories/[category].astro`,
-          });
-          injectRoute({
-            pattern: '/categories/[category]/page/[page]',
-            entrypoint: `${pagesDir}/categories/[category]/page/[page].astro`,
-          });
+          injectLocalizedRoute(
+            '/categories',
+            `${pagesDir}/categories/index.astro`
+          );
+          injectLocalizedRoute(
+            '/categories/[category]',
+            `${pagesDir}/categories/[category].astro`
+          );
+          injectLocalizedRoute(
+            '/categories/[category]/page/[page]',
+            `${pagesDir}/categories/[category]/page/[page].astro`
+          );
         }
 
         // Archives routes
         if (routes.archives) {
-          injectRoute({
-            pattern: '/archives',
-            entrypoint: `${pagesDir}/archives/index.astro`,
-          });
-          injectRoute({
-            pattern: '/archives/[year]/[month]',
-            entrypoint: `${pagesDir}/archives/[year]/[month].astro`,
-          });
-          injectRoute({
-            pattern: '/archives/[year]/[month]/page/[page]',
-            entrypoint: `${pagesDir}/archives/[year]/[month]/page/[page].astro`,
-          });
+          injectLocalizedRoute('/archives', `${pagesDir}/archives/index.astro`);
+          injectLocalizedRoute(
+            '/archives/[year]/[month]',
+            `${pagesDir}/archives/[year]/[month].astro`
+          );
+          injectLocalizedRoute(
+            '/archives/[year]/[month]/page/[page]',
+            `${pagesDir}/archives/[year]/[month]/page/[page].astro`
+          );
         }
 
         // Slides routes
         if (routes.slides) {
-          injectRoute({
-            pattern: '/slides',
-            entrypoint: `${pagesDir}/slides/index.astro`,
-          });
-          injectRoute({
-            pattern: '/slides/[...slug]',
-            entrypoint: `${pagesDir}/slides/[...slug].astro`,
-          });
+          injectLocalizedRoute('/slides', `${pagesDir}/slides/index.astro`);
+          injectLocalizedRoute(
+            '/slides/[...slug]',
+            `${pagesDir}/slides/[...slug].astro`
+          );
         }
 
         // Search routes
         if (routes.search) {
-          injectRoute({
-            pattern: '/search',
-            entrypoint: `${pagesDir}/search.astro`,
-          });
-          injectRoute({
-            pattern: '/search-index.json',
-            entrypoint: `${pagesDir}/search-index.json.ts`,
-          });
+          injectLocalizedRoute('/search', `${pagesDir}/search.astro`);
+          injectLocalizedRoute(
+            '/search-index.json',
+            `${pagesDir}/search-index.json.ts`
+          );
         }
 
         // RSS route
         if (routes.rss) {
-          injectRoute({
-            pattern: '/rss.xml',
-            entrypoint: `${pagesDir}/rss.xml.ts`,
-          });
+          injectLocalizedRoute('/rss.xml', `${pagesDir}/rss.xml.ts`);
         }
 
-        // Content pages (index, about, etc.) - always inject
-        injectRoute({
-          pattern: '/[...slug]',
-          entrypoint: `${pagesDir}/[...slug].astro`,
-        });
+        // Content pages (index, about, etc.) - always inject for all locales
+        injectLocalizedRoute('/[...slug]', `${pagesDir}/[...slug].astro`);
 
-        logger.info('Routes injected successfully!');
+        const localeCount = locales.length;
+        logger.info(
+          `Routes injected successfully for ${localeCount} locale(s): ${locales.map((l) => l.code).join(', ')}`
+        );
       },
     },
   };
 }
 
 export default astroBlogIntegration;
+
+// Re-export i18n types for convenience
+export type { I18nConfig } from './config/i18n';
