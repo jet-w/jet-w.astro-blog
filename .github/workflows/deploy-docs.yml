@@ -33,7 +33,7 @@ jobs:
           NODE_OPTIONS: --max_old_space_size=8692
           VUEPRESS_SHIKI_DISABLE: true             # disable shiki for unused languages
         run: |-
-          cd templates/default && npm run build
+          cd templates/default && npm install && npm run build
 
       - name: Deploy Docs
         uses: JamesIves/github-pages-deploy-action@v4
