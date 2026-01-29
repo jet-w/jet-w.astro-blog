@@ -41,6 +41,9 @@
     "src/components",
     "src/layouts",
     "src/pages",
+    "src/types",
+    "src/utils",
+    "src/config",
     "templates"
   ],
   "scripts": {
