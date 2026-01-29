@@ -1,6 +1,6 @@
 ---
-title: 创建第一篇文章
-description: 编写并发布你的第一篇博客文章
+title: 创建博客与文章
+description: 使用 CLI 创建博客项目并编写你的第一篇文章
 pubDate: 2025-01-01
 author: jet-w
 categories:
@@ -8,13 +8,114 @@ categories:
 tags:
   - 入门
   - 写作
+  - CLI
 ---
 
-# 创建第一篇文章
+# 创建博客与文章
 
-让我们来写你的第一篇博客文章！这才是真正有趣的开始。
+本文将指导你使用 CLI 工具快速创建博客项目，并编写发布你的第一篇文章。
 
-## 文章存放位置
+## 使用 CLI 创建博客项目
+
+### 快速开始
+
+使用 `@jet-w/astro-blog-cli` 可以快速创建一个新的博客项目：
+
+```bash
+npx @jet-w/astro-blog-cli my-blog
+```
+
+### 交互模式
+
+不带参数运行命令进入交互模式，系统会逐步引导你配置：
+
+```bash
+npx @jet-w/astro-blog-cli
+```
+
+你将被提示输入：
+- 项目名称
+- 博客标题（中英文）
+- 博客描述（中英文）
+- 作者名称
+- 作者邮箱
+- 网站 URL
+- 模板选择
+
+### 非交互模式
+
+使用 `-y` 参数跳过提示，直接使用默认值或指定的选项：
+
+```bash
+# 使用默认配置快速创建
+npx @jet-w/astro-blog-cli my-blog -y
+
+# 指定自定义选项
+npx @jet-w/astro-blog-cli my-blog -y \
+  --title "我的技术博客" \
+  --title-zh "我的技术博客" \
+  --description "A blog about tech" \
+  --description-zh "一个关于技术的博客" \
+  --author "张三" \
+  --email "zhangsan@example.com" \
+  --site "https://myblog.com"
+```
+
+### CLI 命令选项
+
+| 选项 | 描述 | 默认值 |
+|------|------|--------|
+| `-t, --template <template>` | 使用的模板 | `default` |
+| `--title <title>` | 博客标题（英文） | `My Astro Blog` |
+| `--title-zh <titleZh>` | 博客标题（中文） | `我的Astro博客` |
+| `--description <description>` | 博客描述（英文） | - |
+| `--description-zh <descriptionZh>` | 博客描述（中文） | - |
+| `--author <author>` | 作者名称 | `Author` |
+| `--email <email>` | 作者邮箱 | `email@example.com` |
+| `--site <site>` | 网站 URL | `https://example.com` |
+| `--lang <lang>` | CLI 语言（`en`/`zh`） | 自动检测 |
+| `-y, --yes` | 跳过提示，使用默认值 | - |
+| `-f, --force` | 覆盖已存在的目录 | - |
+
+### 启动开发服务器
+
+项目创建完成后：
+
+```bash
+cd my-blog
+npm install
+npm run dev
+```
+
+博客将在 `http://localhost:4321` 运行。
+
+### 项目结构
+
+创建的项目包含以下结构：
+
+```
+my-blog/
+├── astro.config.mjs        # Astro 配置文件
+├── package.json
+├── src/
+│   ├── config/
+│   │   ├── site.ts         # 网站主配置
+│   │   └── locales/        # i18n 配置
+│   │       ├── en/         # 英文语言包
+│   │       └── zh-CN/      # 中文语言包
+│   └── content.config.ts   # 内容集合配置
+├── content/
+│   ├── posts/              # 博客文章（Markdown/MDX）
+│   ├── pages/              # 静态页面
+│   └── slides/             # 演示幻灯片
+└── public/                 # 静态资源
+```
+
+## 创建第一篇文章
+
+现在让我们来写你的第一篇博客文章！
+
+### 文章存放位置
 
 所有博客文章都放在 `content/posts/` 目录：
 
@@ -27,7 +128,7 @@ content/
         └── tutorial.md
 ```
 
-## 创建新文章
+### 创建新文章
 
 在 `content/posts/` 中创建一个名为 `hello-world.md` 的文件：
 
@@ -68,7 +169,7 @@ categories:
 感谢阅读！
 ```
 
-## 查看你的文章
+### 查看你的文章
 
 保存文件后访问：
 
@@ -101,7 +202,7 @@ star: false                # true = 精选文章
 只有 `title` 是必填的。其他字段都是可选的，但建议填写以便更好地组织和优化 SEO。
 :::
 
-## 使用子目录
+## 使用子目录组织文章
 
 使用子目录来组织相关文章：
 
@@ -171,6 +272,20 @@ public/
 ![封面](/images/posts/hello-world/cover.jpg)
 ```
 
+## 博客特性一览
+
+使用本主题创建的博客支持以下特性：
+
+- **多语言支持（i18n）**：中英文双语切换
+- **Markdown & MDX**：强大的内容编写能力
+- **代码高亮**：内置语法高亮支持
+- **Mermaid 图表**：流程图、时序图等
+- **LaTeX 数学公式**：支持数学公式渲染
+- **自定义容器**：tip、warning、danger 等提示块
+- **RSS 订阅**：自动生成 RSS feed
+- **Tailwind CSS**：现代化的样式支持
+- **Vue.js 组件**：可在 MDX 中使用 Vue 组件
+
 ---
 
-恭喜你发布了第一篇文章！接下来，让我们了解 [项目结构](./04-structure)。
+恭喜你创建了博客并发布了第一篇文章！接下来，让我们了解 [项目结构](./04-structure)。

@@ -2,105 +2,223 @@ import { visit } from 'unist-util-visit';
 
 export function remarkContainers() {
   return (tree, file) => {
-    // Pre-process: Handle complete containers in a single paragraph
+    // Pre-process: Handle containers that span across multiple sibling nodes
     // This handles cases like:
-    // ::: tip
-    // Content without blank lines
+    // ::: tip Title
+    // Content text here
+    // - list item 1
+    // - list item 2
     // :::
-    // Where the entire thing is parsed as one paragraph with text "::: tip\nContent\n:::"
-    // Also handles paragraphs with mixed content (text + inline code, etc.)
-    visit(tree, 'paragraph', (node, index, parent) => {
-      if (!node.children || node.children.length === 0) return;
+    // Where the container starts in one paragraph, has sibling nodes (lists, etc),
+    // and the closing ::: may be in a later text node
+    function processMultiNodeContainers(tree) {
+      visit(tree, 'paragraph', (node, index, parent) => {
+        if (!node.children || node.children.length === 0) return;
+        if (!parent || !parent.children) return;
 
-      const firstChild = node.children[0];
-      const lastChild = node.children[node.children.length - 1];
+        const firstChild = node.children[0];
+        if (firstChild.type !== 'text') return;
 
-      // First child must be text starting with :::
-      if (firstChild.type !== 'text') return;
-      // Last child must be text ending with :::
-      if (lastChild.type !== 'text') return;
+        const firstText = firstChild.value;
 
-      const firstText = firstChild.value;
-      const lastText = lastChild.value;
+        // Check if first text starts with ::: type [title]
+        // Allow content to follow on subsequent lines within this paragraph
+        const startMatch = firstText.match(/^(:{3,})\s+(tip|note|warning|danger|info|details)([ \t]+[^\n]*)?\n?/);
+        if (!startMatch) return;
 
-      // Check if first text starts with ::: type
-      const startMatch = firstText.match(/^(:{3,})\s+(tip|note|warning|danger|info|details)([ \t]+[^\n]*)?\n?/);
-      if (!startMatch) return;
+        const [fullMatch, openColons, type, titlePart] = startMatch;
+        const colonCount = openColons.length;
+        const customTitle = titlePart ? titlePart.trim() : '';
+        const title = customTitle || getDefaultTitle(type);
 
-      // Check if last text ends with :::
-      const endMatch = lastText.match(/\n(:{3,})\s*$/);
-      if (!endMatch) return;
+        // Now we need to find the closing ::: which could be:
+        // 1. At the end of this same paragraph's text
+        // 2. In a sibling paragraph
+        // 3. Inside a text node in a list item (no blank line before :::)
 
-      // Verify the closing colons match the opening
-      const [, openColons, type, titlePart] = startMatch;
-      const [, closeColons] = endMatch;
-      if (openColons.length !== closeColons.length) return;
+        const siblings = parent.children;
+        let endIndex = -1;
+        let endNodeInfo = null; // { siblingIndex, childPath, closeMatch }
 
-      const customTitle = titlePart ? titlePart.trim() : '';
-      const title = customTitle || getDefaultTitle(type);
+        // First check if closing is in the same paragraph
+        const lastChild = node.children[node.children.length - 1];
+        if (lastChild.type === 'text') {
+          const closeInSame = lastChild.value.match(/\n(:{3,})\s*$/);
+          if (closeInSame && closeInSame[1].length === colonCount) {
+            // Closing is in the same paragraph - handle as single paragraph container
+            endNodeInfo = { type: 'same-paragraph', closeMatch: closeInSame };
+          }
+        }
 
-      // Create HTML wrapper
-      let openingHTML, closingHTML;
-      if (type === 'details') {
-        openingHTML = `<details class="container-details custom-container" data-container-type="details">
+        if (!endNodeInfo) {
+          // Search through siblings for the closing :::
+          for (let i = index + 1; i < siblings.length; i++) {
+            const sibling = siblings[i];
+
+            // Check if sibling is a paragraph with just :::
+            if (sibling.type === 'paragraph' &&
+                sibling.children &&
+                sibling.children.length === 1 &&
+                sibling.children[0].type === 'text') {
+              const text = sibling.children[0].value.trim();
+              const closeMatch = text.match(/^(:{3,})$/);
+              if (closeMatch && closeMatch[1].length === colonCount) {
+                endIndex = i;
+                endNodeInfo = { type: 'sibling-paragraph', siblingIndex: i };
+                break;
+              }
+            }
+
+            // Check if closing ::: is embedded in a text node (e.g., after a list item)
+            // This happens when there's no blank line before :::
+            if (sibling.type === 'list' && sibling.children) {
+              // Check the last item of the list
+              const lastItem = sibling.children[sibling.children.length - 1];
+              if (lastItem.children) {
+                const lastItemPara = lastItem.children[lastItem.children.length - 1];
+                if (lastItemPara.type === 'paragraph' && lastItemPara.children) {
+                  const lastText = lastItemPara.children[lastItemPara.children.length - 1];
+                  if (lastText.type === 'text') {
+                    const closeMatch = lastText.value.match(/\n(:{3,})\s*$/);
+                    if (closeMatch && closeMatch[1].length === colonCount) {
+                      endIndex = i;
+                      endNodeInfo = {
+                        type: 'in-list',
+                        siblingIndex: i,
+                        lastText: lastText,
+                        closeMatch: closeMatch
+                      };
+                      break;
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+
+        if (!endNodeInfo) return; // No closing found
+
+        // Create HTML wrapper
+        let openingHTML, closingHTML;
+        if (type === 'details') {
+          openingHTML = `<details class="container-details custom-container" data-container-type="details">
 <summary class="container-title">${title}</summary>
 <div class="container-content">`;
-        closingHTML = `</div>
+          closingHTML = `</div>
 </details>`;
-      } else {
-        openingHTML = `<div class="container-${type} custom-container" data-container-type="${type}">
+        } else {
+          openingHTML = `<div class="container-${type} custom-container" data-container-type="${type}">
 <div class="container-title">${title}</div>
 <div class="container-content">`;
-        closingHTML = `</div>
+          closingHTML = `</div>
 </div>`;
-      }
-
-      // Extract content by modifying the first and last text nodes
-      // Remove the ::: opening from first text
-      const newFirstText = firstText.slice(startMatch[0].length);
-      // Remove the ::: closing from last text
-      const newLastText = lastText.slice(0, endMatch.index);
-
-      // Build new content children
-      const contentChildren = [];
-      for (let i = 0; i < node.children.length; i++) {
-        const child = node.children[i];
-        if (i === 0) {
-          // First child - use trimmed text
-          if (node.children.length === 1) {
-            // Single text node - extract middle content
-            const middleText = newFirstText.slice(0, newFirstText.length - (firstText.length - lastText.length) - endMatch[0].length);
-            if (middleText.trim()) {
-              contentChildren.push({ ...child, value: middleText.trim() });
-            }
-          } else if (newFirstText.trim()) {
-            contentChildren.push({ ...child, value: newFirstText });
-          }
-        } else if (i === node.children.length - 1) {
-          // Last child - use trimmed text
-          if (newLastText.trim()) {
-            contentChildren.push({ ...child, value: newLastText });
-          }
-        } else {
-          // Middle children - keep as-is
-          contentChildren.push({ ...child });
         }
-      }
 
-      // If no content, skip
-      if (contentChildren.length === 0) return;
+        const htmlStartNode = { type: 'html', value: openingHTML };
+        const htmlEndNode = { type: 'html', value: closingHTML };
 
-      // Replace with HTML nodes and content paragraph
-      const htmlStartNode = { type: 'html', value: openingHTML };
-      const contentParagraph = {
-        type: 'paragraph',
-        children: contentChildren
-      };
-      const htmlEndNode = { type: 'html', value: closingHTML };
+        if (endNodeInfo.type === 'same-paragraph') {
+          // Handle single paragraph container
+          const lastChild = node.children[node.children.length - 1];
+          const newFirstText = firstText.slice(fullMatch.length);
+          const newLastText = lastChild.value.slice(0, endNodeInfo.closeMatch.index);
 
-      parent.children.splice(index, 1, htmlStartNode, contentParagraph, htmlEndNode);
-      return index + 3;
-    });
+          const contentChildren = [];
+          for (let i = 0; i < node.children.length; i++) {
+            const child = node.children[i];
+            if (i === 0) {
+              if (node.children.length === 1) {
+                // Single text node
+                const middleText = newFirstText.slice(0, newFirstText.length - (firstText.length - lastChild.value.length) - endNodeInfo.closeMatch[0].length);
+                if (middleText.trim()) {
+                  contentChildren.push({ ...child, value: middleText.trim() });
+                }
+              } else if (newFirstText.trim()) {
+                contentChildren.push({ ...child, value: newFirstText });
+              }
+            } else if (i === node.children.length - 1) {
+              if (newLastText.trim()) {
+                contentChildren.push({ ...child, value: newLastText });
+              }
+            } else {
+              contentChildren.push({ ...child });
+            }
+          }
+
+          if (contentChildren.length === 0) return;
+
+          const contentParagraph = { type: 'paragraph', children: contentChildren };
+          parent.children.splice(index, 1, htmlStartNode, contentParagraph, htmlEndNode);
+          return index + 3;
+
+        } else if (endNodeInfo.type === 'sibling-paragraph') {
+          // Closing is in a sibling paragraph
+          // Extract content from opening paragraph (after the ::: line)
+          const newFirstText = firstText.slice(fullMatch.length);
+          const contentNodes = [];
+
+          // Add remaining content from opening paragraph if any
+          if (newFirstText.trim() || node.children.length > 1) {
+            const newParaChildren = [];
+            if (newFirstText.trim()) {
+              newParaChildren.push({ ...firstChild, value: newFirstText });
+            }
+            for (let i = 1; i < node.children.length; i++) {
+              newParaChildren.push({ ...node.children[i] });
+            }
+            if (newParaChildren.length > 0) {
+              contentNodes.push({ type: 'paragraph', children: newParaChildren });
+            }
+          }
+
+          // Add all siblings between opening and closing
+          for (let i = index + 1; i < endIndex; i++) {
+            contentNodes.push(siblings[i]);
+          }
+
+          const replaceCount = endIndex - index + 1;
+          const newNodes = [htmlStartNode, ...contentNodes, htmlEndNode];
+          parent.children.splice(index, replaceCount, ...newNodes);
+          return index + newNodes.length;
+
+        } else if (endNodeInfo.type === 'in-list') {
+          // Closing ::: is inside the last list item
+          // Remove the closing from the text node
+          endNodeInfo.lastText.value = endNodeInfo.lastText.value.slice(0, endNodeInfo.closeMatch.index);
+
+          // Extract content from opening paragraph
+          const newFirstText = firstText.slice(fullMatch.length);
+          const contentNodes = [];
+
+          if (newFirstText.trim() || node.children.length > 1) {
+            const newParaChildren = [];
+            if (newFirstText.trim()) {
+              newParaChildren.push({ ...firstChild, value: newFirstText });
+            }
+            for (let i = 1; i < node.children.length; i++) {
+              newParaChildren.push({ ...node.children[i] });
+            }
+            if (newParaChildren.length > 0) {
+              contentNodes.push({ type: 'paragraph', children: newParaChildren });
+            }
+          }
+
+          // Add all siblings including the list (which now has the ::: removed)
+          for (let i = index + 1; i <= endIndex; i++) {
+            contentNodes.push(siblings[i]);
+          }
+
+          const replaceCount = endIndex - index + 1;
+          const newNodes = [htmlStartNode, ...contentNodes, htmlEndNode];
+          parent.children.splice(index, replaceCount, ...newNodes);
+          return index + newNodes.length;
+        }
+      });
+    }
+
+    // Run the multi-node container processor
+    processMultiNodeContainers(tree);
 
     // Pre-process: Extract ::: from text nodes where it appears at the end
     // This handles cases where ::: is on a new line but without a blank line separator
@@ -355,10 +473,34 @@ export function remarkContainers() {
         console.log('DEBUG containerDirective:', type, 'children:', node.children?.length || 0, JSON.stringify(node.children?.map(c => c.type)));
       }
 
-      // Get custom title from directive label (text after ::: type on same line)
+      // Get custom title from directive label
+      // remark-directive v4 may store label in different places:
+      // 1. node.data.directiveLabel (standard location)
+      // 2. node.children[0] as a paragraph with the label text
       let customTitle = '';
+      let contentChildren = node.children || [];
+
+      // Check node.data.directiveLabel first (standard remark-directive behavior)
       if (node.data && node.data.directiveLabel) {
         customTitle = node.data.directiveLabel;
+      }
+      // Check if first child is a paragraph that contains just the title text
+      // This happens when label is on same line: ::: warning Title Here
+      else if (contentChildren.length > 0) {
+        const firstChild = contentChildren[0];
+        // If first child is paragraph with single text node, it might be the title
+        if (firstChild.type === 'paragraph' &&
+            firstChild.children &&
+            firstChild.children.length === 1 &&
+            firstChild.children[0].type === 'text') {
+          const text = firstChild.children[0].value.trim();
+          // Check if this looks like a title (single line, no markdown formatting)
+          // and the directive has more children (actual content)
+          if (!text.includes('\n') && contentChildren.length > 1) {
+            customTitle = text;
+            contentChildren = contentChildren.slice(1); // Remove title from content
+          }
+        }
       }
 
       const title = customTitle || getDefaultTitle(type);
@@ -382,7 +524,7 @@ export function remarkContainers() {
       const htmlStartNode = { type: 'html', value: openingHTML };
       const htmlEndNode = { type: 'html', value: closingHTML };
 
-      const newNodes = [htmlStartNode, ...node.children, htmlEndNode];
+      const newNodes = [htmlStartNode, ...contentChildren, htmlEndNode];
       parent.children.splice(index, 1, ...newNodes);
 
       return index + newNodes.length;
@@ -395,9 +537,23 @@ export function remarkContainers() {
         return;
       }
 
+      // Get custom title from directive label
       let customTitle = '';
+      let contentChildren = node.children || [];
+
       if (node.data && node.data.directiveLabel) {
         customTitle = node.data.directiveLabel;
+      }
+      // Check if first child is a text node that could be the title
+      else if (contentChildren.length > 0) {
+        const firstChild = contentChildren[0];
+        if (firstChild.type === 'text') {
+          const text = firstChild.value.trim();
+          if (!text.includes('\n') && contentChildren.length > 1) {
+            customTitle = text;
+            contentChildren = contentChildren.slice(1);
+          }
+        }
       }
 
       const title = customTitle || getDefaultTitle(type);
@@ -421,7 +577,7 @@ export function remarkContainers() {
       const htmlStartNode = { type: 'html', value: openingHTML };
       const htmlEndNode = { type: 'html', value: closingHTML };
 
-      const newNodes = [htmlStartNode, ...node.children, htmlEndNode];
+      const newNodes = [htmlStartNode, ...contentChildren, htmlEndNode];
       parent.children.splice(index, 1, ...newNodes);
 
       return index + newNodes.length;
