@@ -2,7 +2,7 @@
 import { siteConfig, footerConfig, defaultIcons } from '@jet-w/astro-blog/config';
 import type { I18nConfig } from '../../config/i18n';
 import { defaultI18nConfig } from '../../config/i18n';
-import { getLocaleFromPath, getLocaleConfig, getLocalePrefix } from '../../utils/i18n';
+import { getLocaleFromPath, getLocaleConfig, getLocalePrefix, removeBase, withBase } from '../../utils/i18n';
 
 export interface Props {
   i18nConfig?: I18nConfig;
@@ -10,7 +10,13 @@ export interface Props {
 
 const { i18nConfig = defaultI18nConfig } = Astro.props;
 
-const currentLocale = getLocaleFromPath(Astro.url.pathname, i18nConfig);
+// Get base URL for prefixing links
+const base = import.meta.env.BASE_URL;
+
+// Remove base URL from current path for locale detection
+const pathWithoutBase = removeBase(Astro.url.pathname, base);
+
+const currentLocale = getLocaleFromPath(pathWithoutBase, i18nConfig);
 const localeConfig = getLocaleConfig(currentLocale, i18nConfig);
 const ui = localeConfig.ui;
 
@@ -24,10 +30,13 @@ function getIcon(link: { type: string; icon?: string }): string {
   return link.icon || defaultIcons[link.type] || '';
 }
 
-// Get locale prefix for RSS link
-const base = import.meta.env.BASE_URL;
+// Get locale prefix for RSS link (already includes base)
 const localePrefix = getLocalePrefix(currentLocale, i18nConfig, base);
-const rssUrl = localeFooterConfig.rssUrl || footerConfig.rssUrl || `${localePrefix}/rss.xml`;
+// Apply withBase to rssUrl if it's a relative path
+const configRssUrl = localeFooterConfig.rssUrl || footerConfig.rssUrl;
+const rssUrl = configRssUrl
+  ? (configRssUrl.startsWith('/') && !configRssUrl.startsWith(base) ? withBase(configRssUrl, base) : configRssUrl)
+  : `${localePrefix}/rss.xml`;
 
 const copyright = (localeFooterConfig.copyright || footerConfig.copyright)
   .replace('{year}', String(currentYear))
@@ -41,7 +50,7 @@ const copyright = (localeFooterConfig.copyright || footerConfig.copyright)
         <div class="flex items-center space-x-3 mb-3">
           {(localeSiteConfig.avatar || siteConfig.avatar) && (
             <img
-              src={localeSiteConfig.avatar || siteConfig.avatar}
+              src={withBase(localeSiteConfig.avatar || siteConfig.avatar || '', base)}
               alt={localeSiteConfig.title || siteConfig.title}
               class="w-8 h-8 rounded-full"
             />
@@ -64,7 +73,7 @@ const copyright = (localeFooterConfig.copyright || footerConfig.copyright)
         <div class="flex flex-wrap gap-x-4 gap-y-1">
           {(localeFooterConfig.quickLinks || footerConfig.quickLinks).map((item) => (
             <a
-              href={item.href}
+              href={withBase(item.href, base)}
               class="text-sm text-slate-600 dark:text-slate-400 hover:text-primary-500 transition-colors"
             >
               {item.name}

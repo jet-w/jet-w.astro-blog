@@ -23,7 +23,15 @@ export interface Props {
 const { i18nConfig = virtualI18nConfig || defaultI18nConfig } = Astro.props;
 
 const currentPath = Astro.url.pathname;
-const currentLocale = getLocaleFromPath(currentPath, i18nConfig);
+
+// Get base URL for prefixing links
+const base = import.meta.env.BASE_URL;
+
+// Get base path without base URL - needed for locale detection
+const pathWithoutBase = removeBase(currentPath, base);
+
+// Detect current locale from path (without base URL)
+const currentLocale = getLocaleFromPath(pathWithoutBase, i18nConfig);
 const localeConfig = getLocaleConfig(currentLocale, i18nConfig);
 const ui = localeConfig.ui;
 
@@ -31,12 +39,7 @@ const ui = localeConfig.ui;
 const localeSiteConfig = localeConfig.site;
 const menu = localeConfig.menu;
 
-// Get base URL for prefixing links
-const base = import.meta.env.BASE_URL;
-
-// Get base path without base URL and without locale prefix for language switcher
-// First remove the base URL prefix, then remove the locale prefix
-const pathWithoutBase = removeBase(currentPath, base);
+// Get path without locale prefix for language switcher
 const pathWithoutLocale = removeLocalePrefix(pathWithoutBase, i18nConfig);
 
 // Check if multi-language is enabled

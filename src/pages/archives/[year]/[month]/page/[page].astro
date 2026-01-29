@@ -3,6 +3,9 @@ import { getCollection } from 'astro:content';
 import PageLayout from '@jet-w/astro-blog/layouts/PageLayout.astro';
 import PostCard from '@jet-w/astro-blog/components/blog/PostCard.astro';
 import Pagination from '@jet-w/astro-blog/components/ui/Pagination.astro';
+import { i18nConfig as virtualI18nConfig } from 'virtual:astro-blog-i18n';
+import { defaultI18nConfig } from '../../../../../config/i18n';
+import { getLocaleFromPath, getLocaleConfig, getLocalePrefix, filterPostsByLocale, removeBase } from '../../../../../utils/i18n';
 
 export async function getStaticPaths() {
   const postsPerPage = 10;
@@ -57,8 +60,23 @@ export async function getStaticPaths() {
 const { year, month, page: currentPage, totalPages } = Astro.props;
 const postsPerPage = 10;
 
+// Get i18n config
+const i18nConfig = virtualI18nConfig || defaultI18nConfig;
+const base = import.meta.env.BASE_URL;
+
+// Remove base URL from current path for locale detection
+const pathWithoutBase = removeBase(Astro.url.pathname, base);
+
+const currentLocale = getLocaleFromPath(pathWithoutBase, i18nConfig);
+const localeConfig = getLocaleConfig(currentLocale, i18nConfig);
+const ui = localeConfig.ui;
+const localePrefix = getLocalePrefix(currentLocale, i18nConfig, base);
+
 // 获取该月的所有文章
-const allPosts = await getCollection('posts', ({ data }) => !data.draft);
+const allPostsCollection = await getCollection('posts', ({ data }) => !data.draft);
+
+// Filter posts by current locale
+const allPosts = filterPostsByLocale(allPostsCollection, currentLocale, i18nConfig);
 
 const filteredPosts = allPosts
   .filter(post => {
@@ -80,29 +98,32 @@ const posts = filteredPosts.slice(startIndex, endIndex);
 
 // 月份名称
 const monthNames = ['一月', '二月', '三月', '四月', '五月', '六月', '七月', '八月', '九月', '十月', '十一月', '十二月'];
-const monthName = monthNames[month - 1];
+const monthNamesEn = ['January', 'February', 'March', 'April', 'May', 'June', 'July', 'August', 'September', 'October', 'November', 'December'];
+const monthName = currentLocale.startsWith('en') ? monthNamesEn[month - 1] : monthNames[month - 1];
+const archiveTitle = currentLocale.startsWith('en') ? `${monthName} ${year}` : `${year}年${monthName}`;
 ---
 
 <PageLayout
-  title={`归档: ${year}年${month}月 - 第 ${currentPage} 页`}
-  description={`${year}年${month}月的所有文章归档 - 第 ${currentPage} 页`}
+  title={`${ui.archives}: ${archiveTitle} - ${ui.page} ${currentPage}`}
+  description={`${ui.archives} ${archiveTitle} - ${ui.page} ${currentPage}`}
   showSidebar={true}
+  i18nConfig={i18nConfig}
 >
   <!-- 面包屑导航 -->
   <nav class="flex items-center space-x-2 text-sm text-slate-600 dark:text-slate-400 mb-8">
-    <a href="/" class="hover:text-primary-500 transition-colors">首页</a>
+    <a href={`${localePrefix}/`} class="hover:text-primary-500 transition-colors">{ui.home}</a>
     <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
       <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7" />
     </svg>
-    <a href="/archives" class="hover:text-primary-500 transition-colors">归档</a>
+    <a href={`${localePrefix}/archives`} class="hover:text-primary-500 transition-colors">{ui.archives}</a>
     <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
       <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7" />
     </svg>
-    <a href={`/archives/${year}/${String(month).padStart(2, '0')}`} class="hover:text-primary-500 transition-colors">{year}年{month}月</a>
+    <a href={`${localePrefix}/archives/${year}/${String(month).padStart(2, '0')}`} class="hover:text-primary-500 transition-colors">{archiveTitle}</a>
     <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
       <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7" />
     </svg>
-    <span class="text-slate-900 dark:text-slate-100">第 {currentPage} 页</span>
+    <span class="text-slate-900 dark:text-slate-100">{ui.page} {currentPage}</span>
   </nav>
 
   <!-- 页面头部 -->
@@ -114,20 +135,20 @@ const monthName = monthNames[month - 1];
     </div>
 
     <h1 class="text-4xl font-bold text-slate-900 dark:text-slate-100 mb-4">
-      {year}年{monthName}
+      {archiveTitle}
     </h1>
 
     <p class="text-xl text-slate-600 dark:text-slate-400 mb-8">
-      共 {totalPosts} 篇文章
+      {totalPosts} {ui.posts}
     </p>
 
     <!-- 归档统计 -->
     <div class="inline-flex items-center space-x-6 text-sm text-slate-500 dark:text-slate-400 bg-slate-50 dark:bg-slate-800 px-6 py-3 rounded-lg">
-      <span>{year}年{month}月</span>
+      <span>{archiveTitle}</span>
       <span>•</span>
-      <span>{totalPosts} 篇文章</span>
+      <span>{totalPosts} {ui.posts}</span>
       <span>•</span>
-      <span>第 {currentPage} / {totalPages} 页</span>
+      <span>{ui.page} {currentPage} / {totalPages}</span>
     </div>
   </div>
 
@@ -147,6 +168,9 @@ const monthName = monthNames[month - 1];
             image: post.data.image
           }}
           layout="horizontal"
+          localePrefix={localePrefix}
+          locale={localeConfig.locale.dateLocale}
+          ui={ui}
         />
       ))}
     </div>
@@ -154,13 +178,13 @@ const monthName = monthNames[month - 1];
     <div class="text-center py-16">
       <div class="text-6xl mb-4">📅</div>
       <h3 class="text-xl font-semibold text-slate-900 dark:text-slate-100 mb-2">
-        暂无文章
+        {ui.noPostsFound}
       </h3>
       <p class="text-slate-600 dark:text-slate-400 mb-6">
-        {year}年{month}月暂无发布的文章
+        {ui.noPostsFound}
       </p>
-      <a href="/archives" class="btn-secondary">
-        浏览所有归档
+      <a href={`${localePrefix}/archives`} class="btn-secondary">
+        {ui.archives}
       </a>
     </div>
   )}
@@ -170,7 +194,7 @@ const monthName = monthNames[month - 1];
     <Pagination
       currentPage={currentPage}
       totalPages={totalPages}
-      baseUrl={`/archives/${year}/${String(month).padStart(2, '0')}`}
+      baseUrl={`${localePrefix}/archives/${year}/${String(month).padStart(2, '0')}`}
     />
   )}
 </PageLayout>

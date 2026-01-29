@@ -3,7 +3,7 @@ import { siteConfig } from '@jet-w/astro-blog/config';
 import '@jet-w/astro-blog/styles/slides.css';
 import type { I18nConfig } from '../config/i18n';
 import { defaultI18nConfig } from '../config/i18n';
-import { getLocaleFromPath, getLocaleConfig } from '../utils/i18n';
+import { getLocaleFromPath, getLocaleConfig, removeBase } from '../utils/i18n';
 
 export interface Props {
   title: string;
@@ -33,8 +33,14 @@ const {
   i18nConfig = defaultI18nConfig,
 } = Astro.props;
 
-// Get current locale
-const currentLocale = getLocaleFromPath(Astro.url.pathname, i18nConfig);
+// Get base URL for prefixing links
+const base = import.meta.env.BASE_URL;
+
+// Remove base URL from current path for locale detection
+const pathWithoutBase = removeBase(Astro.url.pathname, base);
+
+// Get current locale (use path without base)
+const currentLocale = getLocaleFromPath(pathWithoutBase, i18nConfig);
 const localeConfig = getLocaleConfig(currentLocale, i18nConfig);
 const localeData = localeConfig.locale;
 const localeSiteConfig = localeConfig.site;
@@ -65,7 +71,7 @@ const revealConfig = JSON.stringify({
     <meta charset="UTF-8" />
     <meta name="description" content={description} />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
+    <link rel="icon" type="image/svg+xml" href={`${base}favicon.svg`} />
     <meta name="generator" content={Astro.generator} />
     <title>{fullTitle}</title>
 
@@ -75,11 +81,11 @@ const revealConfig = JSON.stringify({
     <meta property="og:description" content={description} />
 
     <!-- Reveal.js CSS -->
-    <link rel="stylesheet" href="/slides/reveal.css" />
-    <link rel="stylesheet" href={`/slides/theme/${theme}.css`} id="theme" />
+    <link rel="stylesheet" href={`${base}slides/reveal.css`} />
+    <link rel="stylesheet" href={`${base}slides/theme/${theme}.css`} id="theme" />
 
     <!-- Reveal.js 代码高亮主题 -->
-    <link rel="stylesheet" href="/slides/plugin/highlight/monokai.css" />
+    <link rel="stylesheet" href={`${base}slides/plugin/highlight/monokai.css`} />
 
     <!-- KaTeX for math -->
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.css" />
@@ -117,7 +123,7 @@ const revealConfig = JSON.stringify({
     </a>
 
     <!-- 检测嵌入模式并隐藏返回按钮，设置返回链接为父路径 -->
-    <script is:inline>
+    <script is:inline define:vars={{ baseUrl: base }}>
       (function() {
         var btn = document.getElementById('slides-back-btn');
         if (!btn) return;
@@ -138,17 +144,29 @@ const revealConfig = JSON.stringify({
         }
         // 获取父路径
         var parentPath = path.substring(0, path.lastIndexOf('/'));
-        // 如果父路径为空，返回首页
-        btn.href = parentPath || '/';
+        // 如果父路径为空，返回base URL
+        btn.href = parentPath || baseUrl;
       })();
     </script>
 
-    <!-- Reveal.js -->
-    <script is:inline src="/slides/reveal.js"></script>
-    <script is:inline src="/slides/plugin/markdown/markdown.js"></script>
-    <script is:inline src="/slides/plugin/highlight/highlight.js"></script>
-    <script is:inline src="/slides/plugin/notes/notes.js"></script>
-    <script is:inline src="/slides/plugin/math/math.js"></script>
+    <!-- Reveal.js - dynamically loaded with base URL -->
+    <script is:inline define:vars={{ baseUrl: base }}>
+      (function() {
+        var scripts = [
+          baseUrl + 'slides/reveal.js',
+          baseUrl + 'slides/plugin/markdown/markdown.js',
+          baseUrl + 'slides/plugin/highlight/highlight.js',
+          baseUrl + 'slides/plugin/notes/notes.js',
+          baseUrl + 'slides/plugin/math/math.js'
+        ];
+        scripts.forEach(function(src) {
+          var script = document.createElement('script');
+          script.src = src;
+          script.async = false;
+          document.head.appendChild(script);
+        });
+      })();
+    </script>
 
     <!-- Mermaid -->
     <script is:inline src="https://cdn.jsdelivr.net/npm/mermaid@10/dist/mermaid.min.js"></script>

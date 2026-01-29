@@ -4,7 +4,7 @@ import SearchInterface from '@jet-w/astro-blog/components/ui/SearchInterface.vue
 import type { I18nConfig } from '../config/i18n';
 import { defaultI18nConfig } from '../config/i18n';
 import { i18nConfig as virtualI18nConfig } from 'virtual:astro-blog-i18n';
-import { getLocaleFromPath, getLocaleConfig } from '../utils/i18n';
+import { getLocaleFromPath, getLocaleConfig, removeBase } from '../utils/i18n';
 
 export interface Props {
   i18nConfig?: I18nConfig;
@@ -12,8 +12,14 @@ export interface Props {
 
 const { i18nConfig = virtualI18nConfig || defaultI18nConfig } = Astro.props;
 
-// Get current locale from URL
-const currentLocale = getLocaleFromPath(Astro.url.pathname, i18nConfig);
+// Get base URL for prefixing links
+const base = import.meta.env.BASE_URL;
+
+// Remove base URL from current path for locale detection
+const pathWithoutBase = removeBase(Astro.url.pathname, base);
+
+// Get current locale from URL (use path without base)
+const currentLocale = getLocaleFromPath(pathWithoutBase, i18nConfig);
 const localeConfig = getLocaleConfig(currentLocale, i18nConfig);
 const ui = localeConfig.ui;
 

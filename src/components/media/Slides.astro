@@ -78,6 +78,9 @@ const revealConfig = JSON.stringify({
   touch: true,
 });
 
+// Get base URL for static assets
+const base = import.meta.env.BASE_URL;
+
 // 获取 slot 内容
 const slotContent = await Astro.slots.render('default');
 const hasInlineContent = slotContent && slotContent.trim().length > 0;
@@ -164,13 +167,26 @@ const slidesData = hasInlineContent ? parseSlides(slotContent) : [];
   </div>
 
   <!-- Reveal.js 资源 -->
-  <link rel="stylesheet" href="/slides/reveal.css" />
-  <link rel="stylesheet" href={`/slides/theme/${theme}.css`} />
-  <link rel="stylesheet" href="/slides/plugin/highlight/monokai.css" />
+  <link rel="stylesheet" href={`${base}slides/reveal.css`} />
+  <link rel="stylesheet" href={`${base}slides/theme/${theme}.css`} />
+  <link rel="stylesheet" href={`${base}slides/plugin/highlight/monokai.css`} />
 
-  <script is:inline src="/slides/reveal.js"></script>
-  <script is:inline src="/slides/plugin/markdown/markdown.js"></script>
-  <script is:inline src="/slides/plugin/highlight/highlight.js"></script>
+  <!-- Reveal.js - dynamically loaded with base URL -->
+  <script is:inline define:vars={{ baseUrl: base }}>
+    (function() {
+      var scripts = [
+        baseUrl + 'slides/reveal.js',
+        baseUrl + 'slides/plugin/markdown/markdown.js',
+        baseUrl + 'slides/plugin/highlight/highlight.js'
+      ];
+      scripts.forEach(function(src) {
+        var script = document.createElement('script');
+        script.src = src;
+        script.async = false;
+        document.head.appendChild(script);
+      });
+    })();
+  </script>
 
   <script is:inline define:vars={{ slidesId, revealConfig }}>
     (function() {

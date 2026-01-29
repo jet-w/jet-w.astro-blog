@@ -1,4 +1,5 @@
 import { defineConfig } from 'astro/config';
+import { loadEnv } from 'vite';
 import vue from '@astrojs/vue';
 import tailwind from '@astrojs/tailwind';
 import mdx from '@astrojs/mdx';
@@ -6,6 +7,9 @@ import remarkDirective from 'remark-directive';
 import remarkMath from 'remark-math';
 import rehypeKatex from 'rehype-katex';
 import rehypeRaw from 'rehype-raw';
+
+// Load environment variables from .env file
+const { SITE_URL, BASE_PATH } = loadEnv(process.env.NODE_ENV || 'production', process.cwd(), '');
 
 // Import plugins and integration from @jet-w/astro-blog
 import { astroBlog, defineI18nConfig } from '@jet-w/astro-blog';
@@ -59,7 +63,7 @@ export default defineConfig({
       rehypeKatex,
       rehypeCleanContainers,
       rehypeTabs,
-      rehypeRelativeLinks,
+      [rehypeRelativeLinks, { base: BASE_PATH || process.env.BASE_PATH || '/' }],
       rehypeRestoreCode,  // Must run LAST to restore ::: in code blocks
     ],
     shikiConfig: {
@@ -68,8 +72,8 @@ export default defineConfig({
       wrap: true
     }
   },
-  site: process.env.SITE_URL || 'https://example.com',
-  base: process.env.BASE_PATH || '/',
+  site: SITE_URL || process.env.SITE_URL || 'https://example.com',
+  base: BASE_PATH || process.env.BASE_PATH || '/',
   build: {
     assets: 'assets'
   },

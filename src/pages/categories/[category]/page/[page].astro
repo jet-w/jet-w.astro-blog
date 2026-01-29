@@ -3,6 +3,9 @@ import { getCollection } from 'astro:content';
 import PageLayout from '@jet-w/astro-blog/layouts/PageLayout.astro';
 import PostCard from '@jet-w/astro-blog/components/blog/PostCard.astro';
 import Pagination from '@jet-w/astro-blog/components/ui/Pagination.astro';
+import { i18nConfig as virtualI18nConfig } from 'virtual:astro-blog-i18n';
+import { defaultI18nConfig } from '../../../../config/i18n';
+import { getLocaleFromPath, getLocaleConfig, getLocalePrefix, filterPostsByLocale, removeBase } from '../../../../utils/i18n';
 
 export async function getStaticPaths() {
   const postsPerPage = 10;
@@ -53,8 +56,23 @@ export async function getStaticPaths() {
 const { categorySlug, categoryName, page: currentPage, totalPages } = Astro.props;
 const postsPerPage = 10;
 
+// Get i18n config
+const i18nConfig = virtualI18nConfig || defaultI18nConfig;
+const base = import.meta.env.BASE_URL;
+
+// Remove base URL from current path for locale detection
+const pathWithoutBase = removeBase(Astro.url.pathname, base);
+
+const currentLocale = getLocaleFromPath(pathWithoutBase, i18nConfig);
+const localeConfig = getLocaleConfig(currentLocale, i18nConfig);
+const ui = localeConfig.ui;
+const localePrefix = getLocalePrefix(currentLocale, i18nConfig, base);
+
 // 获取所有文章并筛选包含该分类的文章
-const allPosts = await getCollection('posts', ({ data }) => !data.draft);
+const allPostsCollection = await getCollection('posts', ({ data }) => !data.draft);
+
+// Filter posts by current locale
+const allPosts = filterPostsByLocale(allPostsCollection, currentLocale, i18nConfig);
 
 // 筛选包含该分类的文章
 const filteredPosts = allPosts
@@ -95,25 +113,26 @@ const relatedCategories = Array.from(relatedCategoryMap.entries())
 ---
 
 <PageLayout
-  title={`分类: ${categoryName} - 第 ${currentPage} 页`}
-  description={`浏览所有 ${categoryName} 相关的文章 - 第 ${currentPage} 页`}
+  title={`${ui.inCategory}: ${categoryName} - ${ui.page} ${currentPage}`}
+  description={`${ui.inCategory} ${categoryName} - ${ui.page} ${currentPage}`}
   showSidebar={true}
+  i18nConfig={i18nConfig}
 >
   <!-- 面包屑导航 -->
   <nav class="flex items-center space-x-2 text-sm text-slate-600 dark:text-slate-400 mb-8">
-    <a href="/" class="hover:text-primary-500 transition-colors">首页</a>
+    <a href={`${localePrefix}/`} class="hover:text-primary-500 transition-colors">{ui.home}</a>
     <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
       <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7" />
     </svg>
-    <a href="/categories" class="hover:text-primary-500 transition-colors">分类</a>
+    <a href={`${localePrefix}/categories`} class="hover:text-primary-500 transition-colors">{ui.allCategories}</a>
     <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
       <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7" />
     </svg>
-    <a href={`/categories/${categorySlug}`} class="hover:text-primary-500 transition-colors">{categoryName}</a>
+    <a href={`${localePrefix}/categories/${categorySlug}`} class="hover:text-primary-500 transition-colors">{categoryName}</a>
     <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
       <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7" />
     </svg>
-    <span class="text-slate-900 dark:text-slate-100">第 {currentPage} 页</span>
+    <span class="text-slate-900 dark:text-slate-100">{ui.page} {currentPage}</span>
   </nav>
 
   <!-- 页面头部 -->
@@ -129,16 +148,16 @@ const relatedCategories = Array.from(relatedCategoryMap.entries())
     </h1>
 
     <p class="text-xl text-slate-600 dark:text-slate-400 mb-8 max-w-2xl mx-auto">
-      浏览 {categoryName} 分类下的所有文章
+      {totalPosts} {ui.posts}
     </p>
 
     <!-- 分类统计 -->
     <div class="inline-flex items-center space-x-6 text-sm text-slate-500 dark:text-slate-400 bg-slate-50 dark:bg-slate-800 px-6 py-3 rounded-lg">
       <span>{categoryName}</span>
       <span>•</span>
-      <span>{totalPosts} 篇文章</span>
+      <span>{totalPosts} {ui.posts}</span>
       <span>•</span>
-      <span>第 {currentPage} / {totalPages} 页</span>
+      <span>{ui.page} {currentPage} / {totalPages}</span>
     </div>
   </div>
 
@@ -158,6 +177,9 @@ const relatedCategories = Array.from(relatedCategoryMap.entries())
             image: post.data.image
           }}
           layout="horizontal"
+          localePrefix={localePrefix}
+          locale={localeConfig.locale.dateLocale}
+          ui={ui}
         />
       ))}
     </div>
@@ -165,13 +187,13 @@ const relatedCategories = Array.from(relatedCategoryMap.entries())
     <div class="text-center py-16">
       <div class="text-6xl mb-4">📂</div>
       <h3 class="text-xl font-semibold text-slate-900 dark:text-slate-100 mb-2">
-        暂无相关文章
+        {ui.noPostsFound}
       </h3>
       <p class="text-slate-600 dark:text-slate-400 mb-6">
-        目前还没有 {categoryName} 分类的文章，请查看其他分类。
+        {ui.noPostsFound}
       </p>
-      <a href="/categories" class="btn-secondary">
-        浏览所有分类
+      <a href={`${localePrefix}/categories`} class="btn-secondary">
+        {ui.allCategories}
       </a>
     </div>
   )}
@@ -181,7 +203,7 @@ const relatedCategories = Array.from(relatedCategoryMap.entries())
     <Pagination
       currentPage={currentPage}
       totalPages={totalPages}
-      baseUrl={`/categories/${categorySlug}`}
+      baseUrl={`${localePrefix}/categories/${categorySlug}`}
     />
   )}
 
@@ -189,12 +211,12 @@ const relatedCategories = Array.from(relatedCategoryMap.entries())
   {relatedCategories.length > 0 && (
     <section class="mt-16 pt-8 border-t border-slate-200 dark:border-slate-700">
       <h2 class="text-2xl font-bold text-slate-900 dark:text-slate-100 mb-6">
-        相关分类
+        {ui.categories}
       </h2>
       <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
         {relatedCategories.map((relatedCategory) => (
           <a
-            href={`/categories/${relatedCategory.slug}`}
+            href={`${localePrefix}/categories/${relatedCategory.slug}`}
             class="group card hover:shadow-lg transform hover:-translate-y-1 transition-all duration-300"
           >
             <div class="flex items-center justify-between">
@@ -203,7 +225,7 @@ const relatedCategories = Array.from(relatedCategoryMap.entries())
                   {relatedCategory.name}
                 </h3>
                 <p class="text-sm text-slate-600 dark:text-slate-400">
-                  {relatedCategory.count} 篇文章
+                  {relatedCategory.count} {ui.posts}
                 </p>
               </div>
               <svg class="w-5 h-5 text-slate-400 group-hover:text-amber-500 transition-colors" fill="none" stroke="currentColor" viewBox="0 0 24 24">
