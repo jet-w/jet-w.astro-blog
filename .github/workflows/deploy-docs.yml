@@ -28,10 +28,12 @@ jobs:
           node-version: 22
           cache: 'npm'
 
+      - name: Build Root Package
+        run: npm install && npm run build
+
       - name: Build Blog
         env:
           NODE_OPTIONS: --max_old_space_size=8692
-          VUEPRESS_SHIKI_DISABLE: true             # disable shiki for unused languages
         run: |-
           cd templates/default && npm install && npm run build
 
