@@ -68,8 +68,8 @@ export default defineConfig({
       wrap: true
     }
   },
-  site: 'https://example.com',
-  base: '/',
+  site: process.env.SITE_URL || 'https://example.com',
+  base: process.env.BASE_PATH || '/',
   build: {
     assets: 'assets'
   },
