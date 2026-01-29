@@ -1,0 +1,89 @@
+{
+  "name": "@jet-w/astro-blog",
+  "version": "0.2.0",
+  "description": "A modern Astro blog theme with Vue and Tailwind CSS support",
+  "type": "module",
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "import": "./dist/index.js"
+    },
+    "./package.json": "./package.json",
+    "./config": {
+      "types": "./dist/config/index.d.ts",
+      "import": "./dist/config/index.js"
+    },
+    "./types": {
+      "types": "./dist/types/index.d.ts",
+      "import": "./dist/types/index.js"
+    },
+    "./plugins/*": "./src/plugins/*",
+    "./styles/*": "./src/styles/*",
+    "./components/*": "./src/components/*",
+    "./layouts/*": "./src/layouts/*",
+    "./utils/sidebar": {
+      "types": "./dist/utils/sidebar.d.ts",
+      "import": "./dist/utils/sidebar.js"
+    }
+  },
+  "files": [
+    "dist",
+    "src/plugins",
+    "src/styles",
+    "src/components",
+    "src/layouts",
+    "src/pages",
+    "templates"
+  ],
+  "scripts": {
+    "build": "tsup",
+    "dev": "tsup --watch",
+    "prepublishOnly": "npm run build"
+  },
+  "keywords": [
+    "astro",
+    "astro-theme",
+    "blog",
+    "vue",
+    "tailwindcss",
+    "markdown",
+    "mdx"
+  ],
+  "author": "Haiyue",
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/jet-w/jet-w.astro-blog.git"
+  },
+  "homepage": "https://github.com/jet-w/jet-w.astro-blog.git#readme",
+  "bugs": {
+    "url": "https://github.com/jet-w/astro-blog/issues"
+  },
+  "peerDependencies": {
+    "astro": "^5.0.0",
+    "@astrojs/mdx": "^4.0.0",
+    "@astrojs/rss": "^4.0.0",
+    "@astrojs/tailwind": "^5.0.0",
+    "@astrojs/vue": "^5.0.0",
+    "tailwindcss": "^3.4.0",
+    "vue": "^3.5.0"
+  },
+  "dependencies": {
+    "@tailwindcss/typography": "^0.5.15",
+    "fuse.js": "^7.0.0",
+    "gray-matter": "^4.0.3",
+    "marked": "^15.0.2",
+    "prismjs": "^1.29.0",
+    "rehype-katex": "^7.0.1",
+    "rehype-raw": "^7.0.0",
+    "remark-directive": "^4.0.0",
+    "remark-math": "^6.0.0",
+    "unist-util-visit": "^5.0.0"
+  },
+  "devDependencies": {
+    "@types/node": "^20.0.0",
+    "@types/prismjs": "^1.26.4",
+    "tsup": "^8.0.0",
+    "typescript": "^5.7.0"
+  }
+}

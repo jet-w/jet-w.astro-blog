@@ -13,12 +13,25 @@ export interface Props {
   };
   featured?: boolean;
   layout?: 'vertical' | 'horizontal';
+  localePrefix?: string;
+  locale?: string;
+  ui?: {
+    readMore?: string;
+    minuteRead?: string;
+  };
 }
 
-const { post, featured = false, layout = 'vertical' } = Astro.props;
+const {
+  post,
+  featured = false,
+  layout = 'vertical',
+  localePrefix = '',
+  locale = 'zh-CN',
+  ui = { readMore: '阅读更多', minuteRead: '分钟' }
+} = Astro.props;
 
 const formattedDate = post.pubDate
-  ? new Intl.DateTimeFormat('zh-CN', {
+  ? new Intl.DateTimeFormat(locale, {
       year: 'numeric',
       month: 'long',
       day: 'numeric'
@@ -31,12 +44,17 @@ const isHorizontal = layout === 'horizontal';
 const tagToSlug = (tag: string) => tag.toLowerCase().replace(/\s+/g, '-');
 // 将分类名转换为 slug 格式
 const categoryToSlug = (category: string) => category.toLowerCase().replace(/\s+/g, '-');
+
+// Build URLs with locale prefix
+const postUrl = `${localePrefix}/posts/${post.slug}`;
+const tagUrl = (tag: string) => `${localePrefix}/tags/${tagToSlug(tag)}`;
+const categoryUrl = (category: string) => `${localePrefix}/categories/${categoryToSlug(category)}`;
 ---
 
 <article class={`group card hover:shadow-lg transform hover:-translate-y-1 transition-all duration-300 ${isHorizontal ? 'flex gap-6 items-center' : 'block'}`}>
   <!-- 文章图片 -->
   {post.image && (
-    <a href={`/posts/${post.slug}`} class={`block overflow-hidden rounded-lg ${
+    <a href={postUrl} class={`block overflow-hidden rounded-lg ${
       isHorizontal ? 'w-48 h-32 flex-shrink-0' : 'w-full h-48 mb-4'
     }`}>
       <img
@@ -55,7 +73,7 @@ const categoryToSlug = (category: string) => category.toLowerCase().replace(/\s+
       <div class="flex flex-wrap gap-2 mb-2">
         {post.categories.slice(0, 2).map((category) => (
           <a
-            href={`/categories/${categoryToSlug(category)}`}
+            href={categoryUrl(category)}
             class="text-xs px-2 py-1 bg-amber-100 dark:bg-amber-900/30 text-amber-700 dark:text-amber-300 rounded-full hover:bg-amber-200 dark:hover:bg-amber-900/50 transition-colors"
             onclick="event.stopPropagation();"
           >
@@ -70,7 +88,7 @@ const categoryToSlug = (category: string) => category.toLowerCase().replace(/\s+
       <div class="flex flex-wrap gap-2 mb-3">
         {post.tags.slice(0, 3).map((tag) => (
           <a
-            href={`/tags/${tagToSlug(tag)}`}
+            href={tagUrl(tag)}
             class="text-xs px-2 py-1 bg-primary-100 dark:bg-primary-900/30 text-primary-700 dark:text-primary-300 rounded-full hover:bg-primary-200 dark:hover:bg-primary-900/50 transition-colors"
             onclick="event.stopPropagation();"
           >
@@ -86,7 +104,7 @@ const categoryToSlug = (category: string) => category.toLowerCase().replace(/\s+
     )}
 
     <!-- 标题 -->
-    <a href={`/posts/${post.slug}`}>
+    <a href={postUrl}>
       <h3 class={`font-bold text-slate-900 dark:text-slate-100 hover:text-primary-500 transition-colors line-clamp-2 mb-3 ${
         featured ? 'text-xl' : isHorizontal ? 'text-lg' : 'text-lg'
       }`}>
@@ -95,7 +113,7 @@ const categoryToSlug = (category: string) => category.toLowerCase().replace(/\s+
     </a>
 
     <!-- 描述 -->
-    <a href={`/posts/${post.slug}`}>
+    <a href={postUrl}>
       <p class={`text-slate-600 dark:text-slate-400 line-clamp-3 mb-4 hover:text-slate-700 dark:hover:text-slate-300 transition-colors ${
         isHorizontal ? 'text-sm' : 'text-base'
       }`}>
@@ -129,13 +147,13 @@ const categoryToSlug = (category: string) => category.toLowerCase().replace(/\s+
             <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
             </svg>
-            <span>{post.readingTime}分钟</span>
+            <span>{post.readingTime} {ui.minuteRead}</span>
           </span>
         )}
       </div>
 
-      <a href={`/posts/${post.slug}`} class="flex items-center text-primary-500 hover:text-primary-600 transition-colors">
-        <span class="text-sm font-medium">阅读更多</span>
+      <a href={postUrl} class="flex items-center text-primary-500 hover:text-primary-600 transition-colors">
+        <span class="text-sm font-medium">{ui.readMore}</span>
         <svg class="w-4 h-4 ml-1 group-hover:translate-x-1 transition-transform" fill="none" stroke="currentColor" viewBox="0 0 24 24">
           <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7" />
         </svg>

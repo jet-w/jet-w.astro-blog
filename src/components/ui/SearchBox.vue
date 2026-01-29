@@ -2,12 +2,13 @@
   <div class="relative">
     <div class="relative">
       <input
+        ref="searchInputRef"
         v-model="searchQuery"
         @input="handleInput"
         @focus="handleFocus"
         @blur="handleBlur"
         type="text"
-        placeholder="搜索文章..."
+        :placeholder="props.placeholder || '搜索文章...'"
         class="w-64 pl-10 pr-4 py-2 text-sm bg-slate-100 dark:bg-slate-800 border border-slate-300 dark:border-slate-600 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-500 focus:border-transparent transition-colors"
       />
       <div class="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
@@ -24,7 +25,7 @@
         class="absolute top-full left-0 right-0 mt-2 bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-lg shadow-lg z-50 max-h-96 overflow-y-auto"
       >
         <div v-if="searchResults.length === 0 && searchQuery.length > 0" class="p-4 text-center text-slate-500 dark:text-slate-400">
-          没有找到相关文章
+          {{ props.noResultsText || '没有找到相关文章' }}
         </div>
         <div v-else class="py-2">
           <a
@@ -54,6 +55,12 @@
 
 <script setup lang="ts">
 import { ref, onMounted } from 'vue'
+
+const props = defineProps<{
+  placeholder?: string;
+  searchLabel?: string;
+  noResultsText?: string;
+}>();
 
 interface SearchResult {
   title: string
@@ -145,14 +152,15 @@ const highlightText = (text: string) => {
 }
 
 // 键盘快捷键支持
+const searchInputRef = ref<HTMLInputElement | null>(null)
+
 onMounted(() => {
   // Ctrl/Cmd + K 打开搜索
   document.addEventListener('keydown', (e) => {
     if ((e.ctrlKey || e.metaKey) && e.key === 'k') {
       e.preventDefault()
-      const input = document.querySelector('input[placeholder="搜索文章..."]') as HTMLInputElement
-      if (input) {
-        input.focus()
+      if (searchInputRef.value) {
+        searchInputRef.value.focus()
       }
     }
   })

@@ -2,406 +2,435 @@ import { visit } from 'unist-util-visit';
 
 export function remarkContainers() {
   return (tree, file) => {
-
-    // 首先检查是否有多行容器语法（开始和结束在同一段落）
+    // Pre-process: Handle complete containers in a single paragraph
+    // This handles cases like:
+    // ::: tip
+    // Content without blank lines
+    // :::
+    // Where the entire thing is parsed as one paragraph with text "::: tip\nContent\n:::"
+    // Also handles paragraphs with mixed content (text + inline code, etc.)
     visit(tree, 'paragraph', (node, index, parent) => {
       if (!node.children || node.children.length === 0) return;
 
       const firstChild = node.children[0];
+      const lastChild = node.children[node.children.length - 1];
+
+      // First child must be text starting with :::
       if (firstChild.type !== 'text') return;
+      // Last child must be text ending with :::
+      if (lastChild.type !== 'text') return;
 
-      const fullText = firstChild.value;
+      const firstText = firstChild.value;
+      const lastText = lastChild.value;
 
-      // 检查是否是完整的容器语法在同一段落中（包括可能有格式化内容的情况）
-      const containerStartMatch = fullText.match(/^::: (tip|note|warning|danger|info|details)\s*(.*?)(?:\n|$)/);
-      if (containerStartMatch) {
-        // 检查最后一个子节点是否包含结束标记
-        const lastChild = node.children[node.children.length - 1];
-        const hasClosingInSameParagraph = lastChild.type === 'text' &&
-          (lastChild.value.endsWith(':::') || lastChild.value.match(/\n:::[\s]*$/));
+      // Check if first text starts with ::: type
+      const startMatch = firstText.match(/^(:{3,})\s+(tip|note|warning|danger|info|details)([ \t]+[^\n]*)?\n?/);
+      if (!startMatch) return;
 
-        if (hasClosingInSameParagraph) {
-          // 整个容器在同一个段落中，包含格式化内容
-          const [, type, titlePart] = containerStartMatch;
+      // Check if last text ends with :::
+      const endMatch = lastText.match(/\n(:{3,})\s*$/);
+      if (!endMatch) return;
+
+      // Verify the closing colons match the opening
+      const [, openColons, type, titlePart] = startMatch;
+      const [, closeColons] = endMatch;
+      if (openColons.length !== closeColons.length) return;
+
+      const customTitle = titlePart ? titlePart.trim() : '';
+      const title = customTitle || getDefaultTitle(type);
+
+      // Create HTML wrapper
+      let openingHTML, closingHTML;
+      if (type === 'details') {
+        openingHTML = `<details class="container-details custom-container" data-container-type="details">
+<summary class="container-title">${title}</summary>
+<div class="container-content">`;
+        closingHTML = `</div>
+</details>`;
+      } else {
+        openingHTML = `<div class="container-${type} custom-container" data-container-type="${type}">
+<div class="container-title">${title}</div>
+<div class="container-content">`;
+        closingHTML = `</div>
+</div>`;
+      }
+
+      // Extract content by modifying the first and last text nodes
+      // Remove the ::: opening from first text
+      const newFirstText = firstText.slice(startMatch[0].length);
+      // Remove the ::: closing from last text
+      const newLastText = lastText.slice(0, endMatch.index);
+
+      // Build new content children
+      const contentChildren = [];
+      for (let i = 0; i < node.children.length; i++) {
+        const child = node.children[i];
+        if (i === 0) {
+          // First child - use trimmed text
+          if (node.children.length === 1) {
+            // Single text node - extract middle content
+            const middleText = newFirstText.slice(0, newFirstText.length - (firstText.length - lastText.length) - endMatch[0].length);
+            if (middleText.trim()) {
+              contentChildren.push({ ...child, value: middleText.trim() });
+            }
+          } else if (newFirstText.trim()) {
+            contentChildren.push({ ...child, value: newFirstText });
+          }
+        } else if (i === node.children.length - 1) {
+          // Last child - use trimmed text
+          if (newLastText.trim()) {
+            contentChildren.push({ ...child, value: newLastText });
+          }
+        } else {
+          // Middle children - keep as-is
+          contentChildren.push({ ...child });
+        }
+      }
+
+      // If no content, skip
+      if (contentChildren.length === 0) return;
+
+      // Replace with HTML nodes and content paragraph
+      const htmlStartNode = { type: 'html', value: openingHTML };
+      const contentParagraph = {
+        type: 'paragraph',
+        children: contentChildren
+      };
+      const htmlEndNode = { type: 'html', value: closingHTML };
+
+      parent.children.splice(index, 1, htmlStartNode, contentParagraph, htmlEndNode);
+      return index + 3;
+    });
+
+    // Pre-process: Extract ::: from text nodes where it appears at the end
+    // This handles cases where ::: is on a new line but without a blank line separator
+    // e.g., in list items: "- content\n:::" gets parsed as single text node
+
+    // Helper function to extract trailing ::: from a text node
+    function extractTrailingColons(textNode) {
+      const text = textNode.value;
+      const trailingMatch = text.match(/\n(:{3,})\s*$/);
+      if (trailingMatch) {
+        textNode.value = text.slice(0, trailingMatch.index);
+        return trailingMatch[1];
+      }
+      return null;
+    }
+
+    // Process list items - ::: might be attached to last list item's text
+    // We need to manually iterate because visit() doesn't handle tree modifications well
+    function processLists(node, parent, index) {
+      if (node.type === 'list' && node.children && node.children.length > 0) {
+        // Check the last list item
+        const lastItem = node.children[node.children.length - 1];
+        if (lastItem.children && lastItem.children.length > 0) {
+          // Find the last paragraph in the last list item
+          const lastParagraph = lastItem.children[lastItem.children.length - 1];
+          if (lastParagraph.type === 'paragraph' && lastParagraph.children) {
+            // Check the last text node in that paragraph
+            const lastText = lastParagraph.children[lastParagraph.children.length - 1];
+            if (lastText.type === 'text') {
+              const colons = extractTrailingColons(lastText);
+              if (colons && parent) {
+                // Create a new paragraph for the ::: after the list
+                const closingParagraph = {
+                  type: 'paragraph',
+                  children: [{ type: 'text', value: colons }]
+                };
+
+                // Insert after the list
+                parent.children.splice(index + 1, 0, closingParagraph);
+                return true; // Indicate we modified the tree
+              }
+            }
+          }
+        }
+      }
+
+      // Recursively process children
+      if (node.children) {
+        for (let i = 0; i < node.children.length; i++) {
+          if (processLists(node.children[i], node, i)) {
+            // Tree was modified, need to re-check
+            i++; // Skip the newly inserted node
+          }
+        }
+      }
+      return false;
+    }
+    processLists(tree, null, 0);
+
+    // Process regular paragraphs - extract trailing ::: into separate paragraphs
+    // Use a manual loop to handle tree modifications properly
+    function processAllParagraphs(node) {
+      if (!node.children) return;
+
+      for (let i = 0; i < node.children.length; i++) {
+        const child = node.children[i];
+
+        if (child.type === 'paragraph' && child.children && child.children.length > 0) {
+          const lastChild = child.children[child.children.length - 1];
+          if (lastChild.type === 'text') {
+            const colons = extractTrailingColons(lastChild);
+            if (colons) {
+              // Create a new paragraph for the :::
+              const closingParagraph = {
+                type: 'paragraph',
+                children: [{ type: 'text', value: colons }]
+              };
+              // Insert after the current paragraph
+              node.children.splice(i + 1, 0, closingParagraph);
+              i++; // Skip the newly inserted node
+            }
+          }
+        }
+
+        // Recursively process children (but not listItems - handled separately)
+        if (child.type !== 'listItem') {
+          processAllParagraphs(child);
+        }
+      }
+    }
+    processAllParagraphs(tree);
+
+    // Process containers multiple times to handle nesting (innermost first)
+    // Each pass processes containers that don't contain other unprocessed containers
+    let maxPasses = 5; // Prevent infinite loops
+    for (let pass = 0; pass < maxPasses; pass++) {
+      let foundContainers = false;
+
+      // Handle paragraph-based container syntax
+      visit(tree, 'paragraph', (node, index, parent) => {
+        if (!node.children || node.children.length === 0) return;
+
+        const firstChild = node.children[0];
+        if (firstChild.type !== 'text') return;
+
+        const fullText = firstChild.value;
+
+        // Check for container start: :::+ type [title]
+        const startMatch = fullText.match(/^(:{3,}) (tip|note|warning|danger|info|details)([ \t]+[^\n]*)?$/m);
+        if (startMatch) {
+          const [, colons, type, titlePart] = startMatch;
+          const colonCount = colons.length;
           const customTitle = titlePart ? titlePart.trim() : '';
           const title = customTitle || getDefaultTitle(type);
 
-          // 构建内容节点数组
-          let contentChildren = [];
+          // Find matching closing with exact same number of colons
+          let endIndex = -1;
+          const siblings = parent.children;
+          let nestLevel = 0;
+          let hasUnprocessedInner = false;
 
-          if (node.children.length === 1) {
-            // 只有一个子节点：移除开始标记和结束标记，保留中间内容
-            let content = fullText
-              .replace(/^::: (tip|note|warning|danger|info|details)\s*(.*?)(?:\n|$)/, '')  // 移除开始标记
-              .replace(/\n?:::[\s]*$/, '');  // 移除结束标记
-            if (content) {
-              contentChildren.push({ type: 'text', value: content });
-            }
-          } else {
-            // 多个子节点：第一个和最后一个是 text，中间可能有 strong/emphasis 等
-            // 提取第一个 text 节点中开始标记之后的内容
-            const firstTextContent = fullText.replace(/^::: (tip|note|warning|danger|info|details)\s*(.*?)(?:\n|$)/, '');
-            if (firstTextContent) {
-              contentChildren.push({ type: 'text', value: firstTextContent });
-            }
-
-            // 添加中间的所有节点（strong、emphasis 等）
-            for (let i = 1; i < node.children.length - 1; i++) {
-              contentChildren.push(JSON.parse(JSON.stringify(node.children[i])));
-            }
-
-            // 移除最后一个 text 节点中的结束标记
-            let lastTextContent = lastChild.value.replace(/\n?:::[\s]*$/, '');
-            if (lastTextContent) {
-              contentChildren.push({ type: 'text', value: lastTextContent });
-            }
-          }
-
-          // 创建 HTML 开始标签
-          const openingHTML = `<div class="container-${type} custom-container" data-container-type="${type}">
-<div class="container-title">${title}</div>
-<div class="container-content">`;
-
-          const closingHTML = `</div>
-</div>`;
-
-          const htmlStartNode = { type: 'html', value: openingHTML };
-          const htmlEndNode = { type: 'html', value: closingHTML };
-
-          // 如果有内容，创建段落节点
-          let newNodes = [htmlStartNode];
-          if (contentChildren.length > 0) {
-            newNodes.push({
-              type: 'paragraph',
-              children: contentChildren
-            });
-          }
-          newNodes.push(htmlEndNode);
-
-          // 替换当前段落
-          parent.children.splice(index, 1, ...newNodes);
-          return index + newNodes.length;
-        }
-      }
-
-      // 旧的简单情况：纯文本容器（无格式化）在同一段落
-      const completeContainerMatch = fullText.match(/^::: (tip|note|warning|danger|info|details)([^]*?):::$/s);
-      if (completeContainerMatch) {
-        const [, type, content] = completeContainerMatch;
-        const lines = content.trim().split('\n');
-        const customTitle = lines.length > 0 ? lines[0].trim() : '';
-        const title = customTitle || getDefaultTitle(type);
-
-        // 内容是第一行之后的所有内容
-        const contentText = lines.slice(1).join('\n').trim();
-
-        // 创建HTML容器
-        const htmlContent = `<div class="container-${type} custom-container" data-container-type="${type}">
-<div class="container-title">${title}</div>
-<div class="container-content">
-<p>${contentText.replace(/\n/g, '</p>\n<p>')}</p>
-</div>
-</div>`;
-
-        const htmlNode = {
-          type: 'html',
-          value: htmlContent
-        };
-
-        // 替换当前段落
-        parent.children[index] = htmlNode;
-        return;
-      }
-
-      // 检查是否是 tabs 容器开始语法（支持 :::tabs 和 ::: tabs）
-      const tabsMatch = firstChild.value.match(/^:::\s*tabs\s*$/m);
-      if (tabsMatch) {
-        // 寻找 tabs 结束标记
-        let endIndex = -1;
-        const siblings = parent.children;
-
-        for (let i = index + 1; i < siblings.length; i++) {
-          const sibling = siblings[i];
-          if (sibling.type === 'paragraph' &&
-              sibling.children &&
-              sibling.children.length > 0 &&
-              sibling.children[0].type === 'text' &&
-              sibling.children[0].value.trim() === ':::') {
-            endIndex = i;
-            break;
-          }
-        }
-
-        if (endIndex === -1) {
-          endIndex = siblings.length;
-        }
-
-        // 收集中间的内容
-        const contentNodes = siblings.slice(index + 1, endIndex);
-
-        // 创建 tabs 包装器
-        const openingHTML = '<div class="tabs-wrapper">';
-        const closingHTML = '</div>';
-
-        const htmlNode = {
-          type: 'html',
-          value: openingHTML
-        };
-
-        const closeNode = {
-          type: 'html',
-          value: closingHTML
-        };
-
-        // 替换节点
-        const replaceCount = endIndex - index + 1; // +1 包含结束标记
-        const newNodes = [htmlNode, ...contentNodes, closeNode];
-        siblings.splice(index, replaceCount, ...newNodes);
-
-        return index + newNodes.length;
-      }
-
-      // 检查是否匹配容器开始语法（支持标题后直接跟内容，无需空行）
-      const containerMatch = firstChild.value.match(/^::: (tip|note|warning|danger|info|details)(.*)$/m);
-      if (containerMatch) {
-        const [matchedLine, type, titlePart] = containerMatch;
-        const customTitle = titlePart ? titlePart.trim() : '';
-        const title = customTitle || getDefaultTitle(type);
-
-        // 检查是否标题行后面还有内容（无空行的情况）
-        const fullValue = firstChild.value;
-        const matchEnd = fullValue.indexOf(matchedLine) + matchedLine.length;
-        const remainingContent = fullValue.slice(matchEnd).replace(/^\n/, ''); // 移除开头的换行符
-
-        // 检查是否这个段落只包含开始标签
-        const isOnlyStartTag = remainingContent.trim() === '' &&
-                              (fullValue.trim() === `:::${type}${titlePart}`.trim() ||
-                               fullValue.trim() === `::: ${type}${titlePart}`.trim() ||
-                               fullValue.trim() === `::: ${type} ${titlePart}`.trim());
-
-        // 寻找结束标记
-        let endIndex = -1;
-        const siblings = parent.children;
-
-        // 如果是独立的开始标签，跳过紧接着的空段落
-        let searchStart = index + 1;
-        if (isOnlyStartTag && searchStart < siblings.length) {
-          const nextNode = siblings[searchStart];
-          // 如果下一个节点是空段落，跳过它
-          if (nextNode.type === 'paragraph' &&
-              (!nextNode.children || nextNode.children.length === 0 ||
-               (nextNode.children.length === 1 &&
-                nextNode.children[0].type === 'text' &&
-                nextNode.children[0].value.trim() === ''))) {
-            searchStart++;
-          }
-        }
-
-        // 用于存储开始段落中的剩余内容（无空行情况）
-        let inlineContentNodes = [];
-        if (!isOnlyStartTag) {
-          // 标题行后面直接有内容，需要处理这部分内容
-          // 创建内容节点的副本，避免修改原始节点
-          let contentChildren = [];
-
-          // 处理第一个文本节点，移除开始标记（只移除第一行的 ::: type title）
-          const trimmedRemaining = remainingContent.replace(/^\n/, ''); // 移除开头的换行符
-          if (trimmedRemaining !== '') {
-            contentChildren.push({ type: 'text', value: trimmedRemaining });
-          }
-
-          // 复制其他子节点（strong、emphasis 等）
-          for (let i = 1; i < node.children.length; i++) {
-            contentChildren.push(JSON.parse(JSON.stringify(node.children[i])));
-          }
-
-          // 检查最后一个子节点是否包含结束标记
-          let hasClosingTag = false;
-          if (contentChildren.length > 0) {
-            const lastChild = contentChildren[contentChildren.length - 1];
-            if (lastChild.type === 'text') {
-              const closingMatch = lastChild.value.match(/([\s\S]*?)\n:::(\s*)$/) ||
-                                   lastChild.value.match(/([\s\S]*?):::(\s*)$/);
-              if (closingMatch) {
-                lastChild.value = closingMatch[1].trimEnd();
-                hasClosingTag = true;
-                // 如果最后一个文本节点变空了，移除它
-                if (!lastChild.value) {
-                  contentChildren.pop();
-                }
-              }
-            }
-          }
-
-          // 如果有内容，创建段落节点
-          if (contentChildren.length > 0) {
-            inlineContentNodes.push({
-              type: 'paragraph',
-              children: contentChildren
-            });
-          }
-
-          if (hasClosingTag) {
-            // 找到了结束标记，不需要继续搜索
-            endIndex = index + 1;
-          }
-        }
-
-        // 如果还没找到结束标记，继续搜索后续节点
-        if (endIndex === -1) {
-          for (let i = searchStart; i < siblings.length; i++) {
-            const sibling = siblings[i];
-
-            // 检查段落类型中是否有结束标记
-            if (sibling.type === 'paragraph' &&
-                sibling.children &&
-                sibling.children.length > 0) {
-
-              // 检查第一个子节点是否是独立的结束标记
-              const firstChild = sibling.children[0];
-              if (firstChild.type === 'text' && firstChild.value.trim() === ':::') {
-                endIndex = i;
-                break;
-              }
-
-              // 检查最后一个子节点是否包含结束标记
-              const lastChild = sibling.children[sibling.children.length - 1];
-              if (lastChild.type === 'text') {
-                const textValue = lastChild.value;
-
-                // 检查是否包含结束标记（可能在行末，如 "内容\n:::" 或直接 ":::"）
-                const closingMatch = textValue.match(/([\s\S]*?)\n:::(\s*)$/) ||
-                                     textValue.match(/([\s\S]*?):::(\s*)$/);
-                if (closingMatch) {
-                  const contentBefore = closingMatch[1].trimEnd();
-
-                  if (contentBefore || sibling.children.length > 1) {
-                    // 保留结束标记前的内容
-                    lastChild.value = contentBefore;
-                    endIndex = i + 1; // 包含这个段落（作为内容的一部分）
-                  } else {
-                    // 没有内容在结束标记前，这是一个独立的结束标记
-                    endIndex = i;
-                  }
-                  break;
-                }
-              }
-
-              // 也检查第一个子节点是否以容器开始语法开头（但不是结束标记）
-              if (firstChild.type === 'text') {
-                const closingMatch = firstChild.value.match(/^([\s\S]*?)\n:::(\s*)$/) ||
-                                     firstChild.value.match(/^([\s\S]+?):::(\s*)$/);
-                if (closingMatch) {
-                  const contentBefore = closingMatch[1].trim();
-                  if (contentBefore) {
-                    firstChild.value = contentBefore;
-                    endIndex = i + 1;
-                  } else {
-                    endIndex = i;
-                  }
-                  break;
-                }
-              }
-            }
-
-            // 检查列表中是否包含结束标记
-            if (sibling.type === 'list') {
-              let foundClosing = false;
-
-              // 遍历列表项查找结束标记
-              for (let itemIdx = 0; itemIdx < sibling.children.length; itemIdx++) {
-                const listItem = sibling.children[itemIdx];
-                if (!listItem.children) continue;
-
-                for (let paraIdx = 0; paraIdx < listItem.children.length; paraIdx++) {
-                  const para = listItem.children[paraIdx];
-                  if (para.type === 'paragraph' && para.children) {
-                    for (let textIdx = 0; textIdx < para.children.length; textIdx++) {
-                      const textNode = para.children[textIdx];
-                      if (textNode.type === 'text' && textNode.value) {
-                        // 检查文本是否包含结束标记（支持 \n::: 或直接 :::）
-                        const closingMatch = textNode.value.match(/^([\s\S]*?)\n:::(\s*)$/) ||
-                                             textNode.value.match(/^([\s\S]*?):::(\s*)$/);
-                        if (closingMatch) {
-                          const contentBefore = closingMatch[1].trimEnd();
-                          textNode.value = contentBefore;
-                          endIndex = i + 1; // 包含这个列表
-                          foundClosing = true;
-                          break;
-                        }
-                      }
-                    }
-                    if (foundClosing) break;
-                  }
-                }
-                if (foundClosing) break;
-              }
-              if (foundClosing) break;
-            }
-          }
-        }
-
-        if (endIndex === -1) {
-          // 如果找不到结束标记，找到下一个容器或者文档末尾
           for (let i = index + 1; i < siblings.length; i++) {
             const sibling = siblings[i];
             if (sibling.type === 'paragraph' &&
                 sibling.children &&
-                sibling.children[0] &&
+                sibling.children.length > 0 &&
+                sibling.children[0].type === 'text') {
+              const text = sibling.children[0].value.trim();
+
+              // Check for opening of inner container (fewer colons = more inner)
+              const openMatch = text.match(/^(:{3,}) (tip|note|warning|danger|info|details)/);
+              if (openMatch) {
+                if (openMatch[1].length < colonCount) {
+                  // This is an inner container that should be processed first
+                  hasUnprocessedInner = true;
+                } else if (openMatch[1].length === colonCount) {
+                  nestLevel++;
+                }
+              }
+
+              // Check for closing
+              const closeMatch = text.match(/^(:{3,})$/);
+              if (closeMatch) {
+                if (closeMatch[1].length === colonCount) {
+                  if (nestLevel === 0) {
+                    endIndex = i;
+                    break;
+                  } else {
+                    nestLevel--;
+                  }
+                }
+              }
+            }
+          }
+
+          // Skip this container if it has unprocessed inner containers
+          if (hasUnprocessedInner) {
+            return;
+          }
+
+          if (endIndex === -1) {
+            return; // No matching close found
+          }
+
+          foundContainers = true;
+          const contentNodes = siblings.slice(index + 1, endIndex);
+
+          let openingHTML, closingHTML;
+          if (type === 'details') {
+            openingHTML = `<details class="container-details custom-container" data-container-type="details">
+<summary class="container-title">${title}</summary>
+<div class="container-content">`;
+            closingHTML = `</div>
+</details>`;
+          } else {
+            openingHTML = `<div class="container-${type} custom-container" data-container-type="${type}">
+<div class="container-title">${title}</div>
+<div class="container-content">`;
+            closingHTML = `</div>
+</div>`;
+          }
+
+          const htmlStartNode = { type: 'html', value: openingHTML };
+          const htmlEndNode = { type: 'html', value: closingHTML };
+
+          const replaceCount = endIndex - index + 1;
+          const newNodes = [htmlStartNode, ...contentNodes, htmlEndNode];
+          siblings.splice(index, replaceCount, ...newNodes);
+
+          return index + newNodes.length;
+        }
+      });
+
+      // Also process tabs containers in this pass
+      visit(tree, 'paragraph', (node, index, parent) => {
+        if (!node.children || node.children.length === 0) return;
+
+        const firstChild = node.children[0];
+        if (firstChild.type !== 'text') return;
+
+        const tabsMatch = firstChild.value.match(/^:{3,}\s*tabs\s*$/m);
+        if (tabsMatch) {
+          let endIndex = -1;
+          const siblings = parent.children;
+
+          for (let i = index + 1; i < siblings.length; i++) {
+            const sibling = siblings[i];
+            if (sibling.type === 'paragraph' &&
+                sibling.children &&
+                sibling.children.length > 0 &&
                 sibling.children[0].type === 'text' &&
-                sibling.children[0].value.match(/^::: (tip|note|warning|danger|info|details)/)) {
+                /^:{3,}$/.test(sibling.children[0].value.trim())) {
               endIndex = i;
               break;
             }
           }
 
-          // 如果还是没找到，就到文档末尾
           if (endIndex === -1) {
             endIndex = siblings.length;
           }
+
+          const contentNodes = siblings.slice(index + 1, endIndex);
+          const openingHTML = '<div class="tabs-wrapper">';
+          const closingHTML = '</div>';
+
+          const replaceCount = endIndex - index + 1;
+          const newNodes = [
+            { type: 'html', value: openingHTML },
+            ...contentNodes,
+            { type: 'html', value: closingHTML }
+          ];
+          siblings.splice(index, replaceCount, ...newNodes);
+
+          return index + newNodes.length;
         }
+      });
 
-        // 收集中间的内容，从正确的起始位置开始
-        const contentNodes = [...inlineContentNodes, ...siblings.slice(searchStart, endIndex)];
+      if (!foundContainers) {
+        break; // No more containers to process
+      }
+    }
 
-        // 创建HTML容器
-        const openingHTML = `<div class="container-${type} custom-container" data-container-type="${type}">
+    // Handle containerDirective nodes created by remark-directive
+    visit(tree, 'containerDirective', (node, index, parent) => {
+      const type = node.name;
+      if (!['tip', 'note', 'warning', 'danger', 'info', 'details'].includes(type)) {
+        return;
+      }
+
+      // Debug: Log directive node
+      if (process.env.DEBUG_CONTAINERS) {
+        console.log('DEBUG containerDirective:', type, 'children:', node.children?.length || 0, JSON.stringify(node.children?.map(c => c.type)));
+      }
+
+      // Get custom title from directive label (text after ::: type on same line)
+      let customTitle = '';
+      if (node.data && node.data.directiveLabel) {
+        customTitle = node.data.directiveLabel;
+      }
+
+      const title = customTitle || getDefaultTitle(type);
+
+      // Create HTML wrapper - use <details>/<summary> for details type
+      let openingHTML, closingHTML;
+      if (type === 'details') {
+        openingHTML = `<details class="container-details custom-container" data-container-type="details">
+<summary class="container-title">${title}</summary>
+<div class="container-content">`;
+        closingHTML = `</div>
+</details>`;
+      } else {
+        openingHTML = `<div class="container-${type} custom-container" data-container-type="${type}">
 <div class="container-title">${title}</div>
 <div class="container-content">`;
-
-        const closingHTML = `</div>
+        closingHTML = `</div>
 </div>`;
-
-        const htmlNode = {
-          type: 'html',
-          value: openingHTML
-        };
-
-        const closeNode = {
-          type: 'html',
-          value: closingHTML
-        };
-
-        // 替换节点 - 需要考虑可能跳过的空段落
-        const replaceCount = endIndex - index;
-        const newNodes = [htmlNode, ...contentNodes, closeNode];
-        siblings.splice(index, replaceCount, ...newNodes);
-
-        return index + newNodes.length;
       }
+
+      const htmlStartNode = { type: 'html', value: openingHTML };
+      const htmlEndNode = { type: 'html', value: closingHTML };
+
+      const newNodes = [htmlStartNode, ...node.children, htmlEndNode];
+      parent.children.splice(index, 1, ...newNodes);
+
+      return index + newNodes.length;
     });
+
+    // Handle leafDirective nodes (single-line directives)
+    visit(tree, 'leafDirective', (node, index, parent) => {
+      const type = node.name;
+      if (!['tip', 'note', 'warning', 'danger', 'info', 'details'].includes(type)) {
+        return;
+      }
+
+      let customTitle = '';
+      if (node.data && node.data.directiveLabel) {
+        customTitle = node.data.directiveLabel;
+      }
+
+      const title = customTitle || getDefaultTitle(type);
+
+      // Create HTML wrapper - use <details>/<summary> for details type
+      let openingHTML, closingHTML;
+      if (type === 'details') {
+        openingHTML = `<details class="container-details custom-container" data-container-type="details">
+<summary class="container-title">${title}</summary>
+<div class="container-content">`;
+        closingHTML = `</div>
+</details>`;
+      } else {
+        openingHTML = `<div class="container-${type} custom-container" data-container-type="${type}">
+<div class="container-title">${title}</div>
+<div class="container-content">`;
+        closingHTML = `</div>
+</div>`;
+      }
+
+      const htmlStartNode = { type: 'html', value: openingHTML };
+      const htmlEndNode = { type: 'html', value: closingHTML };
+
+      const newNodes = [htmlStartNode, ...node.children, htmlEndNode];
+      parent.children.splice(index, 1, ...newNodes);
+
+      return index + newNodes.length;
+    });
+
   };
 }
 
 function getDefaultTitle(containerType) {
-  const titles = {
-    tip: '💡 提示',
-    note: '📝 注意',
-    warning: '⚠️ 警告',
-    danger: '🚨 危险',
-    info: 'ℹ️ 信息',
-    details: '📋 详情'
-  };
-
-  return titles[containerType] || containerType.toUpperCase();
+  // Return the container type with first letter capitalized
+  return containerType.charAt(0).toUpperCase() + containerType.slice(1);
 }

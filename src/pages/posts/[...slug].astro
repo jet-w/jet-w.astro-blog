@@ -3,9 +3,25 @@ import { getCollection, type CollectionEntry, render } from 'astro:content';
 import PageLayout from '@jet-w/astro-blog/layouts/PageLayout.astro';
 import SlidesLayout from '@jet-w/astro-blog/layouts/SlidesLayout.astro';
 import FloatingToc from '@jet-w/astro-blog/components/blog/FloatingToc.vue';
+import { i18nConfig as virtualI18nConfig } from 'virtual:astro-blog-i18n';
+import { defaultI18nConfig } from '../../config/i18n';
+import { getLocaleFromPath, getLocaleConfig, getLocalePrefix } from '../../utils/i18n';
 
 export async function getStaticPaths() {
   const posts = await getCollection('posts');
+
+  // Build folder title map from README files (inline function)
+  const folderTitles: Record<string, string> = {};
+  posts.forEach(post => {
+    const pathParts = post.id.split('/');
+    const fileName = pathParts[pathParts.length - 1].toLowerCase();
+    if (fileName === 'readme' || fileName === 'readme.md' || fileName === 'readme.mdx') {
+      const folderPath = pathParts.slice(0, -1).join('/').toLowerCase();
+      if (folderPath && post.data.title) {
+        folderTitles[folderPath] = post.data.title;
+      }
+    }
+  });
 
   // 按文件名称排序，readme.md 排在每个文件夹的最前面
   const sortedPosts = posts.sort((a, b) => {
@@ -50,6 +66,7 @@ export async function getStaticPaths() {
       prevPost: CollectionEntry<'posts'> | null;
       nextPost: CollectionEntry<'posts'> | null;
       isDirectory: boolean;
+      folderTitles: Record<string, string>;
     };
   };
 
@@ -61,6 +78,7 @@ export async function getStaticPaths() {
       prevPost: index > 0 ? sortedPosts[index - 1] : null,
       nextPost: index < sortedPosts.length - 1 ? sortedPosts[index + 1] : null,
       isDirectory: false,
+      folderTitles,
     },
   }));
 
@@ -83,6 +101,7 @@ export async function getStaticPaths() {
           prevPost: null,
           nextPost: null,
           isDirectory: true,
+          folderTitles,
         },
       });
     }
@@ -96,10 +115,58 @@ type Props = {
   prevPost: CollectionEntry<'posts'> | null;
   nextPost: CollectionEntry<'posts'> | null;
   isDirectory?: boolean;
+  folderTitles: Record<string, string>;
 };
 
-const { post, prevPost, nextPost, isDirectory } = Astro.props;
+// Build breadcrumb items for a post
+function buildBreadcrumbItems(
+  postId: string,
+  postTitle: string,
+  folderTitles: Record<string, string>
+): Array<{ title: string; path: string; isLast: boolean }> {
+  const parts = postId.toLowerCase().split('/');
+  const items: Array<{ title: string; path: string; isLast: boolean }> = [];
+  let currentPath = '';
+
+  // Build breadcrumb for each folder level
+  for (let i = 0; i < parts.length - 1; i++) {
+    currentPath = currentPath ? `${currentPath}/${parts[i]}` : parts[i];
+    const title = folderTitles[currentPath] || parts[i];
+    items.push({ title, path: currentPath, isLast: false });
+  }
+
+  // Add the current post/file
+  const fileName = parts[parts.length - 1];
+  const isReadme = fileName === 'readme' || fileName === 'readme.md' || fileName === 'readme.mdx';
+
+  if (!isReadme) {
+    items.push({ title: postTitle, path: postId.toLowerCase(), isLast: true });
+  } else if (items.length > 0) {
+    items[items.length - 1].isLast = true;
+  }
+
+  return items;
+}
+
+const { post, prevPost, nextPost, isDirectory, folderTitles } = Astro.props;
 const Content = post ? (await render(post)).Content : null;
+
+// Get i18n config
+const i18nConfig = virtualI18nConfig || defaultI18nConfig;
+const currentLocale = getLocaleFromPath(Astro.url.pathname, i18nConfig);
+const localeConfig = getLocaleConfig(currentLocale, i18nConfig);
+const ui = localeConfig.ui;
+const localePrefix = getLocalePrefix(currentLocale, i18nConfig);
+
+// Get the current slug from URL
+const urlPath = Astro.url.pathname;
+const postsMatch = urlPath.match(/\/posts\/(.+?)\/?$/);
+const currentSlug = postsMatch ? postsMatch[1] : '';
+
+// Build breadcrumb items
+const breadcrumbItems = post
+  ? buildBreadcrumbItems(post.id, post.data.title, folderTitles)
+  : buildBreadcrumbItems(currentSlug, ui.documentTree, folderTitles);
 
 // 判断是否使用 slides 布局
 const isSlides = post?.data.layout === 'slides';
@@ -157,9 +224,31 @@ const formatDate = (date: Date) => {
   title={post.data.title}
   description={post.data.description}
   showSidebar={true}
+  i18nConfig={i18nConfig}
 >
+  <!-- 面包屑导航 -->
+  <nav class="flex items-center flex-wrap gap-y-1 text-sm text-slate-600 dark:text-slate-400 mb-8">
+    <a href={`${localePrefix}/`} class="hover:text-primary-500 transition-colors">{ui.home}</a>
+    {breadcrumbItems.map((item) => (
+      <>
+        <svg class="w-4 h-4 mx-2 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7" />
+        </svg>
+        {item.isLast ? (
+          <span class="text-slate-900 dark:text-slate-100 truncate max-w-xs">{item.title}</span>
+        ) : (
+          <a href={`${localePrefix}/posts/${item.path}`} class="hover:text-primary-500 transition-colors">{item.title}</a>
+        )}
+      </>
+    ))}
+  </nav>
+
   <!-- 浮动目录 -->
-  <FloatingToc client:load />
+  <FloatingToc
+    client:load
+    tocTitle={ui.tableOfContents}
+    progressTitle={ui.readingProgress}
+  />
 
   <!-- 文章头部 -->
   <article class="prose prose-slate dark:prose-invert max-w-none">
@@ -198,7 +287,7 @@ const formatDate = (date: Date) => {
             <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
             </svg>
-            <span>约 {readingTime} 分钟阅读</span>
+            <span>{readingTime} {ui.minuteRead}</span>
           </div>
         </div>
 
@@ -207,7 +296,7 @@ const formatDate = (date: Date) => {
           <div class="flex flex-wrap justify-center gap-2 mt-6">
             {post.data.tags.map((tag) => (
               <a
-                href={`/tags/${tag}`}
+                href={`${localePrefix}/tags/${tag.toLowerCase().replace(/\s+/g, '-')}`}
                 class="px-3 py-1 text-xs font-medium bg-primary-100 dark:bg-primary-900/30 text-primary-700 dark:text-primary-300 rounded-full hover:bg-primary-200 dark:hover:bg-primary-900/50 transition-colors"
               >
                 #{tag}
@@ -241,12 +330,12 @@ const formatDate = (date: Date) => {
       {post.data.categories && post.data.categories.length > 0 && (
         <div class="mb-8">
           <h3 class="text-lg font-semibold text-slate-900 dark:text-slate-100 mb-4">
-            分类
+            {ui.categories}
           </h3>
           <div class="flex flex-wrap gap-2">
             {post.data.categories.map((category) => (
               <a
-                href={`/categories/${category}`}
+                href={`${localePrefix}/categories/${category.toLowerCase().replace(/\s+/g, '-')}`}
                 class="px-4 py-2 text-sm font-medium bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-300 rounded-lg hover:bg-slate-200 dark:hover:bg-slate-700 transition-colors"
               >
                 {category}
@@ -270,10 +359,10 @@ const formatDate = (date: Date) => {
     <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
       <!-- 上一篇 -->
       <div class="text-center md:text-left">
-        <div class="text-sm text-slate-500 dark:text-slate-400 mb-2">上一篇</div>
+        <div class="text-sm text-slate-500 dark:text-slate-400 mb-2">{ui.previousPost}</div>
         {prevPost ? (
           <a
-            href={`/posts/${prevPost.id.toLowerCase()}`}
+            href={`${localePrefix}/posts/${prevPost.id.toLowerCase()}`}
             class="group inline-flex items-center text-primary-500 hover:text-primary-600 dark:hover:text-primary-400 font-medium transition-colors"
           >
             <svg class="w-4 h-4 mr-2 group-hover:-translate-x-1 transition-transform" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -282,16 +371,16 @@ const formatDate = (date: Date) => {
             <span class="line-clamp-1">{prevPost.data.title}</span>
           </a>
         ) : (
-          <span class="text-slate-400 dark:text-slate-600">已经是第一篇了</span>
+          <span class="text-slate-400 dark:text-slate-600">-</span>
         )}
       </div>
 
       <!-- 下一篇 -->
       <div class="text-center md:text-right">
-        <div class="text-sm text-slate-500 dark:text-slate-400 mb-2">下一篇</div>
+        <div class="text-sm text-slate-500 dark:text-slate-400 mb-2">{ui.nextPost}</div>
         {nextPost ? (
           <a
-            href={`/posts/${nextPost.id.toLowerCase()}`}
+            href={`${localePrefix}/posts/${nextPost.id.toLowerCase()}`}
             class="group inline-flex items-center justify-end text-primary-500 hover:text-primary-600 dark:hover:text-primary-400 font-medium transition-colors"
           >
             <span class="line-clamp-1">{nextPost.data.title}</span>
@@ -300,7 +389,7 @@ const formatDate = (date: Date) => {
             </svg>
           </a>
         ) : (
-          <span class="text-slate-400 dark:text-slate-600">已经是最后一篇了</span>
+          <span class="text-slate-400 dark:text-slate-600">-</span>
         )}
       </div>
     </div>
@@ -308,10 +397,28 @@ const formatDate = (date: Date) => {
 </PageLayout>
 ) : (
 <PageLayout
-  title="目录"
-  description="此目录暂无内容"
+  title={ui.documentTree}
+  description={ui.noPostsFound}
   showSidebar={true}
+  i18nConfig={i18nConfig}
 >
+  <!-- 面包屑导航 -->
+  <nav class="flex items-center flex-wrap gap-y-1 text-sm text-slate-600 dark:text-slate-400 mb-8">
+    <a href={`${localePrefix}/`} class="hover:text-primary-500 transition-colors">{ui.home}</a>
+    {breadcrumbItems.map((item) => (
+      <>
+        <svg class="w-4 h-4 mx-2 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7" />
+        </svg>
+        {item.isLast ? (
+          <span class="text-slate-900 dark:text-slate-100 truncate max-w-xs">{item.title}</span>
+        ) : (
+          <a href={`${localePrefix}/posts/${item.path}`} class="hover:text-primary-500 transition-colors">{item.title}</a>
+        )}
+      </>
+    ))}
+  </nav>
+
   <div class="text-center py-16">
     <div class="inline-flex items-center justify-center w-20 h-20 bg-slate-100 dark:bg-slate-800 rounded-full mb-6">
       <svg class="w-10 h-10 text-slate-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -319,16 +426,16 @@ const formatDate = (date: Date) => {
       </svg>
     </div>
     <h1 class="text-2xl font-bold text-slate-900 dark:text-slate-100 mb-4">
-      此目录暂无内容
+      {ui.noPostsFound}
     </h1>
     <p class="text-slate-600 dark:text-slate-400 mb-8">
-      该目录下暂无 README 文件
+      {ui.noPostsFound}
     </p>
-    <a href="/posts" class="inline-flex items-center px-4 py-2 bg-primary-500 text-white rounded-lg hover:bg-primary-600 transition-colors">
+    <a href={`${localePrefix}/posts`} class="inline-flex items-center px-4 py-2 bg-primary-500 text-white rounded-lg hover:bg-primary-600 transition-colors">
       <svg class="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 19l-7-7m0 0l7-7m-7 7h18" />
       </svg>
-      返回文章列表
+      {ui.postList}
     </a>
   </div>
 </PageLayout>

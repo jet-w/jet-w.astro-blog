@@ -3,6 +3,9 @@ import { getCollection } from 'astro:content';
 import PageLayout from '@jet-w/astro-blog/layouts/PageLayout.astro';
 import PostCard from '@jet-w/astro-blog/components/blog/PostCard.astro';
 import Pagination from '@jet-w/astro-blog/components/ui/Pagination.astro';
+import { i18nConfig as virtualI18nConfig } from 'virtual:astro-blog-i18n';
+import { defaultI18nConfig } from '../../config/i18n';
+import { getLocaleFromPath, getLocaleConfig, getLocalePrefix, filterPostsByLocale } from '../../utils/i18n';
 
 export async function getStaticPaths() {
   const allPosts = await getCollection('posts', ({ data }) => !data.draft);
@@ -30,8 +33,18 @@ export async function getStaticPaths() {
 
 const { tagSlug, tagName, tagCount } = Astro.props;
 
+// Get i18n config
+const i18nConfig = virtualI18nConfig || defaultI18nConfig;
+const currentLocale = getLocaleFromPath(Astro.url.pathname, i18nConfig);
+const localeConfig = getLocaleConfig(currentLocale, i18nConfig);
+const ui = localeConfig.ui;
+const localePrefix = getLocalePrefix(currentLocale, i18nConfig);
+
 // 获取所有文章并筛选包含该标签的文章
-const allPosts = await getCollection('posts', ({ data }) => !data.draft);
+const allPostsCollection = await getCollection('posts', ({ data }) => !data.draft);
+
+// Filter posts by current locale
+const allPosts = filterPostsByLocale(allPostsCollection, currentLocale, i18nConfig);
 
 // 筛选包含该标签的文章
 const filteredPosts = allPosts
@@ -75,17 +88,18 @@ const relatedTags = Array.from(relatedTagMap.entries())
 ---
 
 <PageLayout
-  title={`标签: ${tagName}`}
-  description={`浏览所有关于 ${tagName} 的文章`}
+  title={`${ui.taggedWith}: ${tagName}`}
+  description={`${ui.taggedWith} ${tagName}`}
   showSidebar={true}
+  i18nConfig={i18nConfig}
 >
   <!-- 面包屑导航 -->
   <nav class="flex items-center space-x-2 text-sm text-slate-600 dark:text-slate-400 mb-8">
-    <a href="/" class="hover:text-primary-500 transition-colors">首页</a>
+    <a href={`${localePrefix}/`} class="hover:text-primary-500 transition-colors">{ui.home}</a>
     <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
       <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7" />
     </svg>
-    <a href="/tags" class="hover:text-primary-500 transition-colors">标签</a>
+    <a href={`${localePrefix}/tags`} class="hover:text-primary-500 transition-colors">{ui.allTags}</a>
     <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
       <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7" />
     </svg>
@@ -105,18 +119,18 @@ const relatedTags = Array.from(relatedTagMap.entries())
     </h1>
 
     <p class="text-xl text-slate-600 dark:text-slate-400 mb-8">
-      找到 {totalPosts} 篇关于 {tagName} 的文章
+      {totalPosts} {ui.posts}
     </p>
 
     <!-- 标签统计 -->
     <div class="inline-flex items-center space-x-6 text-sm text-slate-500 dark:text-slate-400 bg-slate-50 dark:bg-slate-800 px-6 py-3 rounded-lg">
       <span>#{tagName}</span>
       <span>•</span>
-      <span>{totalPosts} 篇文章</span>
+      <span>{totalPosts} {ui.posts}</span>
       {totalPages > 1 && (
         <>
           <span>•</span>
-          <span>共 {totalPages} 页</span>
+          <span>{totalPages} {ui.page}</span>
         </>
       )}
     </div>
@@ -138,6 +152,9 @@ const relatedTags = Array.from(relatedTagMap.entries())
             image: post.data.image
           }}
           layout="horizontal"
+          localePrefix={localePrefix}
+          locale={localeConfig.locale.dateLocale}
+          ui={ui}
         />
       ))}
     </div>
@@ -145,13 +162,13 @@ const relatedTags = Array.from(relatedTagMap.entries())
     <div class="text-center py-16">
       <div class="text-6xl mb-4">📝</div>
       <h3 class="text-xl font-semibold text-slate-900 dark:text-slate-100 mb-2">
-        暂无相关文章
+        {ui.noPostsFound}
       </h3>
       <p class="text-slate-600 dark:text-slate-400 mb-6">
-        目前还没有关于 {tagName} 的文章，请查看其他标签。
+        {ui.noPostsFound}
       </p>
-      <a href="/tags" class="btn-secondary">
-        浏览所有标签
+      <a href={`${localePrefix}/tags`} class="btn-secondary">
+        {ui.allTags}
       </a>
     </div>
   )}
@@ -161,7 +178,7 @@ const relatedTags = Array.from(relatedTagMap.entries())
     <Pagination
       currentPage={currentPage}
       totalPages={totalPages}
-      baseUrl={`/tags/${tagSlug}`}
+      baseUrl={`${localePrefix}/tags/${tagSlug}`}
     />
   )}
 
@@ -169,12 +186,12 @@ const relatedTags = Array.from(relatedTagMap.entries())
   {relatedTags.length > 0 && (
     <section class="mt-16 pt-8 border-t border-slate-200 dark:border-slate-700">
       <h2 class="text-2xl font-bold text-slate-900 dark:text-slate-100 mb-6">
-        相关标签
+        {ui.popularTags}
       </h2>
       <div class="flex flex-wrap gap-3">
         {relatedTags.map((relatedTag) => (
           <a
-            href={`/tags/${relatedTag.slug}`}
+            href={`${localePrefix}/tags/${relatedTag.slug}`}
             class="inline-flex items-center px-4 py-2 bg-white dark:bg-slate-800 border border-slate-300 dark:border-slate-600 rounded-lg hover:border-primary-300 dark:hover:border-primary-600 hover:shadow-md transition-all duration-200 group"
           >
             <span class="font-medium text-slate-900 dark:text-slate-100 group-hover:text-primary-500 transition-colors">

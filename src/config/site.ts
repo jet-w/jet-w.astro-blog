@@ -6,7 +6,7 @@ import type { SiteConfig } from '../types';
  */
 export const siteConfig: SiteConfig = {
   title: 'My Astro Blog',
-  description: 'A modern blog built with Astro, Vue, and Tailwind CSS',
+  description: '',
   author: 'Author',
   email: '',
   avatar: '/images/avatar.svg',

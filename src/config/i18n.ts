@@ -69,6 +69,21 @@ export interface UITranslations {
   searchResults: string;
   noResults: string;
   searching: string;
+  searchArticles: string;
+  searchInAllArticles: string;
+  searchTips: string;
+  basicSearch: string;
+  advancedFeatures: string;
+  searchTipKeyword: string;
+  searchTipMixedLang: string;
+  searchTipCaseInsensitive: string;
+  searchTipRealtime: string;
+  searchTipFilter: string;
+  searchTipFuzzy: string;
+
+  // Hero section
+  browsePosts: string;
+  aboutMe: string;
 
   // Pagination
   previousPage: string;
@@ -81,6 +96,7 @@ export interface UITranslations {
   updatedOn: string;
   author: string;
   tableOfContents: string;
+  readingProgress: string;
   relatedPosts: string;
   sharePost: string;
   previousPost: string;
@@ -113,6 +129,12 @@ export interface UITranslations {
 
   // RSS
   rssFeed: string;
+
+  // Quick Navigation
+  quickNavigation: string;
+  timeline: string;
+  viewAllTimeline: string;
+  postsCount: string;
 }
 
 /**
@@ -129,6 +151,8 @@ export interface LocaleConfig {
   sidebar?: Partial<SidebarConfig>;
   /** UI translation overrides */
   ui?: Partial<UITranslations>;
+  /** Content path prefix for filtering posts by locale (e.g., 'blog_docs_en' for English) */
+  contentPathPrefix?: string;
 }
 
 /**
@@ -198,6 +222,21 @@ export const zhCNTranslations: UITranslations = {
   searchResults: '搜索结果',
   noResults: '没有找到相关结果',
   searching: '搜索中...',
+  searchArticles: '搜索文章',
+  searchInAllArticles: '在所有文章中查找您感兴趣的内容',
+  searchTips: '搜索技巧',
+  basicSearch: '基础搜索',
+  advancedFeatures: '高级功能',
+  searchTipKeyword: '输入关键词搜索标题和内容',
+  searchTipMixedLang: '支持中英文混合搜索',
+  searchTipCaseInsensitive: '自动忽略大小写',
+  searchTipRealtime: '实时搜索建议',
+  searchTipFilter: '按标签和分类筛选',
+  searchTipFuzzy: '支持模糊匹配',
+
+  // Hero section
+  browsePosts: '浏览文章',
+  aboutMe: '关于我',
 
   // Pagination
   previousPage: '上一页',
@@ -209,7 +248,8 @@ export const zhCNTranslations: UITranslations = {
   publishedOn: '发布于',
   updatedOn: '更新于',
   author: '作者',
-  tableOfContents: '目录',
+  tableOfContents: '页面目录',
+  readingProgress: '阅读进度',
   relatedPosts: '相关文章',
   sharePost: '分享文章',
   previousPost: '上一篇',
@@ -242,6 +282,12 @@ export const zhCNTranslations: UITranslations = {
 
   // RSS
   rssFeed: 'RSS 订阅',
+
+  // Quick Navigation
+  quickNavigation: '快速导航',
+  timeline: '时间轴',
+  viewAllTimeline: '查看全部时间轴',
+  postsCount: '篇',
 };
 
 /**
@@ -289,6 +335,21 @@ export const enTranslations: UITranslations = {
   searchResults: 'Search Results',
   noResults: 'No results found',
   searching: 'Searching...',
+  searchArticles: 'Search Articles',
+  searchInAllArticles: 'Find content that interests you in all articles',
+  searchTips: 'Search Tips',
+  basicSearch: 'Basic Search',
+  advancedFeatures: 'Advanced Features',
+  searchTipKeyword: 'Enter keywords to search titles and content',
+  searchTipMixedLang: 'Supports mixed language search',
+  searchTipCaseInsensitive: 'Case insensitive',
+  searchTipRealtime: 'Real-time search suggestions',
+  searchTipFilter: 'Filter by tags and categories',
+  searchTipFuzzy: 'Supports fuzzy matching',
+
+  // Hero section
+  browsePosts: 'Browse Posts',
+  aboutMe: 'About Me',
 
   // Pagination
   previousPage: 'Previous',
@@ -301,6 +362,7 @@ export const enTranslations: UITranslations = {
   updatedOn: 'Updated on',
   author: 'Author',
   tableOfContents: 'Table of Contents',
+  readingProgress: 'Reading Progress',
   relatedPosts: 'Related Posts',
   sharePost: 'Share',
   previousPost: 'Previous',
@@ -333,6 +395,12 @@ export const enTranslations: UITranslations = {
 
   // RSS
   rssFeed: 'RSS Feed',
+
+  // Quick Navigation
+  quickNavigation: 'Quick Navigation',
+  timeline: 'Timeline',
+  viewAllTimeline: 'View all timeline',
+  postsCount: 'posts',
 };
 
 /**

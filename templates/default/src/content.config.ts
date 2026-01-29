@@ -2,7 +2,11 @@ import { defineCollection, z } from 'astro:content';
 import { glob } from 'astro/loaders';
 
 const posts = defineCollection({
-  loader: glob({ pattern: '**/*.{md,mdx}', base: './content/posts' }),
+  loader: glob({
+    pattern: '**/*.{md,mdx}',
+    base: './content/posts',
+    generateId: ({ entry }) => entry.replace(/\.(md|mdx)$/, ''),
+  }),
   schema: z.object({
     title: z.string(),
     description: z.string().optional(),
@@ -60,7 +64,11 @@ const posts = defineCollection({
 });
 
 const pages = defineCollection({
-  loader: glob({ pattern: '**/*.{md,mdx}', base: './content/pages' }),
+  loader: glob({
+    pattern: '**/*.{md,mdx}',
+    base: './content/pages',
+    generateId: ({ entry }) => entry.replace(/\.(md|mdx)$/, ''),
+  }),
   schema: z.object({
     title: z.string(),
     description: z.string().optional(),
@@ -70,7 +78,11 @@ const pages = defineCollection({
 });
 
 const slides = defineCollection({
-  loader: glob({ pattern: '**/*.{md,mdx}', base: './content/slides' }),
+  loader: glob({
+    pattern: '**/*.{md,mdx}',
+    base: './content/slides',
+    generateId: ({ entry }) => entry.replace(/\.(md|mdx)$/, ''),
+  }),
   schema: z.object({
     title: z.string(),
     description: z.string().optional(),

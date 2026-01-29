@@ -9,6 +9,7 @@ import rehypeRaw from 'rehype-raw';
 
 // Import plugins and integration from @jet-w/astro-blog
 import { astroBlog, defineI18nConfig } from '@jet-w/astro-blog';
+import { remarkProtectCode, rehypeRestoreCode } from '@jet-w/astro-blog/plugins/remark-protect-code.mjs';
 import { remarkContainers } from '@jet-w/astro-blog/plugins/remark-containers.mjs';
 import { remarkMermaid } from '@jet-w/astro-blog/plugins/remark-mermaid.mjs';
 import { rehypeCleanContainers } from '@jet-w/astro-blog/plugins/rehype-clean-containers.mjs';
@@ -23,15 +24,15 @@ import { enConfig } from './src/config/locales/en';
 const i18nConfig = defineI18nConfig({
   defaultLocale: 'en',
   locales: [
-    { code: 'zh-CN', name: '中文', htmlLang: 'zh-CN', dateLocale: 'zh-CN' },
     { code: 'en', name: 'English', htmlLang: 'en', dateLocale: 'en-US' },
+    { code: 'zh-CN', name: '中文', htmlLang: 'zh-CN', dateLocale: 'zh-CN' },
   ],
   routing: {
     prefixDefaultLocale: false, // en (default) uses /posts, zh-CN uses /zh-CN/posts
   },
   localeConfigs: {
-    'zh-CN': zhCNConfig,
     'en': enConfig,
+    'zh-CN': zhCNConfig,
   },
 });
 
@@ -47,9 +48,10 @@ export default defineConfig({
   ],
   markdown: {
     remarkPlugins: [
-      remarkDirective,
+      remarkProtectCode,  // Must run FIRST to protect code blocks
       remarkMath,
-      remarkContainers,
+      remarkDirective,    // Parse ::: syntax into directive nodes
+      remarkContainers,   // Handle container syntax (works with both plain text and directive nodes)
       remarkMermaid,
     ],
     rehypePlugins: [
@@ -58,6 +60,7 @@ export default defineConfig({
       rehypeCleanContainers,
       rehypeTabs,
       rehypeRelativeLinks,
+      rehypeRestoreCode,  // Must run LAST to restore ::: in code blocks
     ],
     shikiConfig: {
       theme: 'github-dark',
@@ -69,5 +72,11 @@ export default defineConfig({
   base: '/',
   build: {
     assets: 'assets'
+  },
+  vite: {
+    resolve: {
+      // Help Vite resolve peer dependencies from injected routes
+      dedupe: ['@astrojs/rss', 'astro']
+    }
   }
 });

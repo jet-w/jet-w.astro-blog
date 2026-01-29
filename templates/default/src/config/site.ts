@@ -10,8 +10,8 @@ import type { SiteConfig } from '@jet-w/astro-blog';
  * Site configuration
  */
 export const siteConfig: SiteConfig = {
-  title: 'My Astro Blog',
-  description: '基于 Astro + Vue + Tailwind 构建的个人技术博客',
+  title: 'My Astro Blog22',
+  description: '',
   author: 'Author',
   email: 'email@example.com',
   avatar: '/images/avatar.svg',

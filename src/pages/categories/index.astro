@@ -1,9 +1,22 @@
 ---
 import { getCollection } from 'astro:content';
 import PageLayout from '@jet-w/astro-blog/layouts/PageLayout.astro';
+import { i18nConfig as virtualI18nConfig } from 'virtual:astro-blog-i18n';
+import { defaultI18nConfig } from '../../config/i18n';
+import { getLocaleFromPath, getLocaleConfig, getLocalePrefix, filterPostsByLocale } from '../../utils/i18n';
+
+// Get i18n config
+const i18nConfig = virtualI18nConfig || defaultI18nConfig;
+const currentLocale = getLocaleFromPath(Astro.url.pathname, i18nConfig);
+const localeConfig = getLocaleConfig(currentLocale, i18nConfig);
+const ui = localeConfig.ui;
+const localePrefix = getLocalePrefix(currentLocale, i18nConfig);
 
 // 从文章集合动态获取所有分类
-const allPosts = await getCollection('posts', ({ data }) => !data.draft);
+const allPostsCollection = await getCollection('posts', ({ data }) => !data.draft);
+
+// Filter posts by current locale
+const allPosts = filterPostsByLocale(allPostsCollection, currentLocale, i18nConfig);
 
 // 统计分类
 const categoryMap = new Map<string, { name: string; count: number }>();
@@ -55,24 +68,34 @@ const getCategoryIcon = (slug: string) => {
 ---
 
 <PageLayout
-  title="分类"
-  description="按分类浏览文章"
+  title={ui.allCategories}
+  description={ui.filterByCategory}
   showSidebar={true}
+  i18nConfig={i18nConfig}
 >
+  <!-- 面包屑导航 -->
+  <nav class="flex items-center space-x-2 text-sm text-slate-600 dark:text-slate-400 mb-8">
+    <a href={`${localePrefix}/`} class="hover:text-primary-500 transition-colors">{ui.home}</a>
+    <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+      <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7" />
+    </svg>
+    <span class="text-slate-900 dark:text-slate-100">{ui.allCategories}</span>
+  </nav>
+
   <!-- 页面头部 -->
   <div class="text-center mb-12">
     <h1 class="text-4xl font-bold text-slate-900 dark:text-slate-100 mb-4">
-      文章分类
+      {ui.allCategories}
     </h1>
     <p class="text-xl text-slate-600 dark:text-slate-400 mb-8">
-      按主题分类浏览所有文章
+      {ui.filterByCategory}
     </p>
 
     <!-- 统计信息 -->
     <div class="inline-flex items-center space-x-6 text-sm text-slate-500 dark:text-slate-400 bg-slate-50 dark:bg-slate-800 px-6 py-3 rounded-lg">
-      <span>共 {allCategories.length} 个分类</span>
+      <span>{allCategories.length} {ui.categories}</span>
       <span>•</span>
-      <span>{totalPosts} 篇文章</span>
+      <span>{totalPosts} {ui.posts}</span>
     </div>
   </div>
 
@@ -80,7 +103,7 @@ const getCategoryIcon = (slug: string) => {
   <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 mb-16">
     {sortedCategories.map((category) => (
       <a
-        href={`/categories/${category.slug}`}
+        href={`${localePrefix}/categories/${category.slug}`}
         class="group card hover:shadow-lg transform hover:-translate-y-1 transition-all duration-300 h-full"
       >
         <div class="flex flex-col h-full">
@@ -99,7 +122,7 @@ const getCategoryIcon = (slug: string) => {
                 <svg class="w-4 h-4 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 7h.01M7 3h5c.512 0 1.024.195 1.414.586l7 7a2 2 0 010 2.828l-7 7a2 2 0 01-2.828 0l-7-7A1.994 1.994 0 013 12V7a4 4 0 014-4z" />
                 </svg>
-                <span>{category.count} 篇文章</span>
+                <span>{category.count} {ui.posts}</span>
               </div>
             </div>
           </div>
@@ -127,12 +150,12 @@ const getCategoryIcon = (slug: string) => {
   {sortedCategories.length > 4 && (
     <section class="mb-16">
       <h2 class="text-2xl font-bold text-slate-900 dark:text-slate-100 mb-8">
-        热门分类
+        {ui.categories}
       </h2>
       <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
         {sortedCategories.slice(0, 4).map((category) => (
           <a
-            href={`/categories/${category.slug}`}
+            href={`${localePrefix}/categories/${category.slug}`}
             class="group p-6 bg-gradient-to-br from-primary-50 to-secondary-50 dark:from-primary-900/20 dark:to-secondary-900/20 rounded-xl border border-primary-200 dark:border-primary-800 hover:shadow-lg transition-all duration-300"
           >
             <div class="text-center">
@@ -152,12 +175,12 @@ const getCategoryIcon = (slug: string) => {
   <!-- 分类列表 -->
   <section>
     <h2 class="text-2xl font-bold text-slate-900 dark:text-slate-100 mb-8">
-      所有分类
+      {ui.allCategories}
     </h2>
     <div class="space-y-3">
       {sortedCategories.map((category) => (
         <a
-          href={`/categories/${category.slug}`}
+          href={`${localePrefix}/categories/${category.slug}`}
           class="flex items-center justify-between p-4 bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-lg hover:shadow-md hover:border-primary-300 dark:hover:border-primary-600 transition-all duration-200 group"
         >
           <div class="flex items-center space-x-4">
@@ -177,7 +200,7 @@ const getCategoryIcon = (slug: string) => {
           </div>
           <div class="flex items-center space-x-3">
             <span class="text-sm px-3 py-1 bg-slate-100 dark:bg-slate-700 text-slate-600 dark:text-slate-400 rounded-full">
-              {category.count} 篇
+              {category.count}
             </span>
             <svg class="w-5 h-5 text-slate-400 group-hover:text-primary-500 transition-colors" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7" />

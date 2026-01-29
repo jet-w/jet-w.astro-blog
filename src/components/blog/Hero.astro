@@ -1,5 +1,20 @@
 ---
 import { siteConfig } from '@jet-w/astro-blog/config';
+import type { I18nConfig } from '../../config/i18n';
+import { defaultI18nConfig } from '../../config/i18n';
+import { i18nConfig as virtualI18nConfig } from 'virtual:astro-blog-i18n';
+import { getLocaleFromPath, getLocaleConfig } from '../../utils/i18n';
+
+export interface Props {
+  i18nConfig?: I18nConfig;
+}
+
+const { i18nConfig = virtualI18nConfig || defaultI18nConfig } = Astro.props;
+
+// Get current locale from URL
+const currentLocale = getLocaleFromPath(Astro.url.pathname, i18nConfig);
+const localeConfig = getLocaleConfig(currentLocale, i18nConfig);
+const ui = localeConfig.ui;
 ---
 
 <section class="py-16 mb-16">
@@ -89,7 +104,7 @@ import { siteConfig } from '@jet-w/astro-blog/config';
         href="/posts"
         class="btn-primary inline-flex items-center space-x-2"
       >
-        <span>浏览文章</span>
+        <span>{ui.browsePosts}</span>
         <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
           <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7" />
         </svg>
@@ -99,7 +114,7 @@ import { siteConfig } from '@jet-w/astro-blog/config';
         href="/about"
         class="btn-secondary inline-flex items-center space-x-2"
       >
-        <span>关于我</span>
+        <span>{ui.aboutMe}</span>
         <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
           <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" />
         </svg>

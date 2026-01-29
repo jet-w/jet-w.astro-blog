@@ -6,7 +6,9 @@
  */
 export const menu = [
   { name: 'Home', href: '/', icon: 'home' },
-  { name: 'Blog Docs', href: '/posts/blog_docs_en', icon: 'posts' },
+  { name: 'Get Started', href: '/posts/blog_docs_en/01.get-started', icon: 'posts' },
+  { name: 'Guide', href: '/posts/blog_docs_en/02.guide', icon: 'posts' },
+  { name: 'Config', href: '/posts/blog_docs_en/03.config', icon: 'posts' },
   { name: 'Slides', href: '/slides', icon: 'slides' },
   { name: 'About', href: '/about', icon: 'about' },
 ];

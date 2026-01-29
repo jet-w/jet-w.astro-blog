@@ -7,7 +7,7 @@
           v-model="searchQuery"
           @input="handleSearch"
           type="text"
-          placeholder="搜索文章标题、内容、标签..."
+          :placeholder="props.placeholder || '搜索文章标题、内容、标签...'"
           class="w-full pl-12 pr-4 py-4 text-lg bg-white dark:bg-slate-800 border-2 border-slate-300 dark:border-slate-600 rounded-xl focus:outline-none focus:ring-2 focus:ring-primary-500 focus:border-transparent transition-colors shadow-sm"
           autofocus
         />
@@ -33,41 +33,41 @@
     <div class="flex flex-wrap gap-4">
       <!-- 标签筛选 -->
       <div class="flex items-center space-x-2">
-        <label class="text-sm font-medium text-slate-700 dark:text-slate-300">标签:</label>
+        <label class="text-sm font-medium text-slate-700 dark:text-slate-300">{{ props.tags || '标签' }}:</label>
         <select
           v-model="selectedTag"
           @change="handleSearch"
           class="text-sm px-3 py-1 bg-white dark:bg-slate-800 border border-slate-300 dark:border-slate-600 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-500"
         >
-          <option value="">全部</option>
+          <option value="">{{ props.all || '全部' }}</option>
           <option v-for="tag in allTags" :key="tag" :value="tag">{{ tag }}</option>
         </select>
       </div>
 
       <!-- 分类筛选 -->
       <div class="flex items-center space-x-2">
-        <label class="text-sm font-medium text-slate-700 dark:text-slate-300">分类:</label>
+        <label class="text-sm font-medium text-slate-700 dark:text-slate-300">{{ props.categories || '分类' }}:</label>
         <select
           v-model="selectedCategory"
           @change="handleSearch"
           class="text-sm px-3 py-1 bg-white dark:bg-slate-800 border border-slate-300 dark:border-slate-600 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-500"
         >
-          <option value="">全部</option>
+          <option value="">{{ props.all || '全部' }}</option>
           <option v-for="category in allCategories" :key="category" :value="category">{{ category }}</option>
         </select>
       </div>
 
       <!-- 排序 -->
       <div class="flex items-center space-x-2">
-        <label class="text-sm font-medium text-slate-700 dark:text-slate-300">排序:</label>
+        <label class="text-sm font-medium text-slate-700 dark:text-slate-300">{{ props.sortLabel || '排序' }}:</label>
         <select
           v-model="sortBy"
           @change="handleSearch"
           class="text-sm px-3 py-1 bg-white dark:bg-slate-800 border border-slate-300 dark:border-slate-600 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-500"
         >
-          <option value="relevance">相关性</option>
-          <option value="date">发布时间</option>
-          <option value="title">标题</option>
+          <option value="relevance">{{ props.relevance || '相关性' }}</option>
+          <option value="date">{{ props.publishTime || '发布时间' }}</option>
+          <option value="title">{{ props.titleLabel || '标题' }}</option>
         </select>
       </div>
     </div>
@@ -75,15 +75,14 @@
     <!-- 搜索状态 -->
     <div class="flex items-center justify-between text-sm text-slate-600 dark:text-slate-400">
       <div>
-        <span v-if="isSearching">正在搜索...</span>
+        <span v-if="isSearching">{{ props.searching || '正在搜索...' }}</span>
         <span v-else-if="searchQuery">
-          找到 {{ searchResults.length }} 个结果
-          <span v-if="searchQuery">包含 "{{ searchQuery }}"</span>
+          {{ props.foundResults || '找到' }} {{ searchResults.length }} {{ props.containing || '个结果包含' }} "{{ searchQuery }}"
         </span>
-        <span v-else>输入关键词开始搜索</span>
+        <span v-else>{{ props.enterKeywordToSearch || '输入关键词开始搜索' }}</span>
       </div>
-      <div v-if="searchTime">
-        搜索用时: {{ searchTime }}ms
+      <div v-if="searchTimeValue">
+        {{ props.searchTime || '搜索用时' }}: {{ searchTimeValue }}ms
       </div>
     </div>
 
@@ -104,7 +103,7 @@
 
               <div class="flex flex-wrap items-center gap-4 text-sm text-slate-500 dark:text-slate-400">
                 <time :datetime="result.date">{{ formatDate(result.date) }}</time>
-                <span v-if="result.readingTime">{{ result.readingTime }}分钟阅读</span>
+                <span v-if="result.readingTime">{{ result.readingTime }} {{ props.readMinutes || '分钟阅读' }}</span>
                 <div class="flex flex-wrap gap-1">
                   <span
                     v-for="tag in result.tags.slice(0, 3)"
@@ -119,7 +118,7 @@
 
             <!-- 相关度评分 -->
             <div class="lg:w-20 text-center">
-              <div class="text-xs text-slate-500 dark:text-slate-400 mb-1">相关度</div>
+              <div class="text-xs text-slate-500 dark:text-slate-400 mb-1">{{ props.relevanceLabel || '相关度' }}</div>
               <div class="flex items-center justify-center">
                 <div class="w-12 h-2 bg-slate-200 dark:bg-slate-700 rounded-full overflow-hidden">
                   <div
@@ -138,16 +137,16 @@
     <div v-else-if="searchQuery && !isSearching" class="text-center py-16">
       <div class="text-6xl mb-4">🔍</div>
       <h3 class="text-xl font-semibold text-slate-900 dark:text-slate-100 mb-2">
-        没有找到相关结果
+        {{ props.noResultsTitle || '没有找到相关结果' }}
       </h3>
       <p class="text-slate-600 dark:text-slate-400 mb-6">
-        尝试使用不同的关键词或调整筛选条件
+        {{ props.noResultsDesc || '尝试使用不同的关键词或调整筛选条件' }}
       </p>
       <button
         @click="clearSearch"
         class="btn-secondary"
       >
-        清除搜索
+        {{ props.clearSearch || '清除搜索' }}
       </button>
     </div>
 
@@ -162,7 +161,7 @@
             ? 'bg-slate-100 dark:bg-slate-800 text-slate-400 border-slate-200 dark:border-slate-700'
             : 'bg-white dark:bg-slate-800 text-slate-700 dark:text-slate-300 border-slate-300 dark:border-slate-600 hover:bg-slate-50 dark:hover:bg-slate-700'"
         >
-          上一页
+          {{ props.previousPage || '上一页' }}
         </button>
 
         <div class="flex items-center space-x-1">
@@ -187,7 +186,7 @@
             ? 'bg-slate-100 dark:bg-slate-800 text-slate-400 border-slate-200 dark:border-slate-700'
             : 'bg-white dark:bg-slate-800 text-slate-700 dark:text-slate-300 border-slate-300 dark:border-slate-600 hover:bg-slate-50 dark:hover:bg-slate-700'"
         >
-          下一页
+          {{ props.nextPage || '下一页' }}
         </button>
       </nav>
     </div>
@@ -198,13 +197,38 @@
 import { ref, computed, onMounted } from 'vue'
 import type { SearchResult } from '@jet-w/astro-blog/types'
 
+const props = defineProps<{
+  placeholder?: string;
+  noResults?: string;
+  tags?: string;
+  categories?: string;
+  sortLabel?: string;
+  relevance?: string;
+  publishTime?: string;
+  titleLabel?: string;
+  all?: string;
+  searching?: string;
+  foundResults?: string;
+  containing?: string;
+  enterKeywordToSearch?: string;
+  searchTime?: string;
+  readMinutes?: string;
+  relevanceLabel?: string;
+  noResultsTitle?: string;
+  noResultsDesc?: string;
+  clearSearch?: string;
+  previousPage?: string;
+  nextPage?: string;
+  dateLocale?: string;
+}>();
+
 const searchQuery = ref('')
 const selectedTag = ref('')
 const selectedCategory = ref('')
 const sortBy = ref('relevance')
 const searchResults = ref<(SearchResult & { score: number; date: string; readingTime?: number })[]>([])
 const isSearching = ref(false)
-const searchTime = ref(0)
+const searchTimeValue = ref(0)
 const currentPage = ref(1)
 const resultsPerPage = 10
 
@@ -339,7 +363,7 @@ const performSearch = () => {
 
     searchResults.value = results
     isSearching.value = false
-    searchTime.value = Math.round(performance.now() - startTime)
+    searchTimeValue.value = Math.round(performance.now() - startTime)
     currentPage.value = 1
   }, 200)
 }
@@ -364,7 +388,7 @@ const highlightText = (text: string) => {
 }
 
 const formatDate = (date: string) => {
-  return new Intl.DateTimeFormat('zh-CN', {
+  return new Intl.DateTimeFormat(props.dateLocale || 'zh-CN', {
     year: 'numeric',
     month: 'long',
     day: 'numeric'

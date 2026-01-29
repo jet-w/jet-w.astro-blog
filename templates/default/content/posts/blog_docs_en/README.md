@@ -2,7 +2,7 @@
 title: Astro Blog Documentation
 description: A modern blog system built with Astro, Vue, and Tailwind CSS
 pubDate: 2025-01-01
-author: Astro Blog
+author: jet-w
 categories:
   - Documentation
 tags:
@@ -20,6 +20,7 @@ A modern, feature-rich blog system built with **Astro**, **Vue 3**, and **Tailwi
 - **Modern** - Built with the latest web technologies
 - **Flexible** - Markdown, MDX, and rich component support
 - **Beautiful** - Clean design with dark mode support
+
 :::
 
 ## Get Started

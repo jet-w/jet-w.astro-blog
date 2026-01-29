@@ -7,9 +7,10 @@ export interface Props {
   }>;
   maxSize?: number;
   minSize?: number;
+  localePrefix?: string;
 }
 
-const { tags, maxSize = 2.5, minSize = 0.8 } = Astro.props;
+const { tags, maxSize = 2.5, minSize = 0.8, localePrefix = '' } = Astro.props;
 
 // 计算字体大小
 const maxCount = Math.max(...tags.map(tag => tag.count));
@@ -48,10 +49,10 @@ const shuffledTags = [...tags].sort(() => Math.random() - 0.5);
   <div class="flex flex-wrap items-center justify-center gap-3 leading-relaxed">
     {shuffledTags.map((tag, index) => (
       <a
-        href={`/tags/${tag.slug}`}
+        href={`${localePrefix}/tags/${tag.slug}`}
         class={`inline-block font-medium transition-all duration-300 hover:scale-110 ${getColorClass(index)}`}
         style={`font-size: ${getFontSize(tag.count)}rem`}
-        title={`${tag.name} (${tag.count} 篇文章)`}
+        title={`${tag.name} (${tag.count})`}
       >
         {tag.name}
       </a>

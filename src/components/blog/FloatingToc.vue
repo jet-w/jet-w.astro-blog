@@ -9,7 +9,7 @@
       <button
         class="p-3 bg-white dark:bg-slate-800 rounded-full shadow-lg border border-slate-200 dark:border-slate-700 hover:bg-slate-50 dark:hover:bg-slate-700 transition-colors"
         :class="{ 'bg-primary-50 dark:bg-primary-900/30': showToc }"
-        aria-label="显示目录"
+        :aria-label="tocTitle"
       >
         <svg class="w-5 h-5 text-slate-600 dark:text-slate-300" fill="none" stroke="currentColor" viewBox="0 0 24 24">
           <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6h16M4 10h16M4 14h16M4 18h16" />
@@ -35,7 +35,7 @@
               <svg class="w-4 h-4 text-primary-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2" />
               </svg>
-              页面目录
+              {{ tocTitle }}
             </h3>
           </div>
 
@@ -66,7 +66,7 @@
           <!-- 进度条 -->
           <div class="px-4 py-2 border-t border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-900/50">
             <div class="flex items-center justify-between text-xs text-slate-500 dark:text-slate-400 mb-1">
-              <span>阅读进度</span>
+              <span>{{ progressTitle }}</span>
               <span>{{ Math.round(progress * 100) }}%</span>
             </div>
             <div class="w-full bg-slate-200 dark:bg-slate-700 rounded-full h-1.5">
@@ -90,6 +90,14 @@ interface Heading {
   text: string
   level: number
 }
+
+const props = withDefaults(defineProps<{
+  tocTitle?: string
+  progressTitle?: string
+}>(), {
+  tocTitle: 'Table of Contents',
+  progressTitle: 'Reading Progress',
+})
 
 const showToc = ref(false)
 const headings = ref<Heading[]>([])

@@ -1,6 +1,16 @@
 ---
 import { getCollection } from 'astro:content';
 import PageLayout from '@jet-w/astro-blog/layouts/PageLayout.astro';
+import { i18nConfig as virtualI18nConfig } from 'virtual:astro-blog-i18n';
+import { defaultI18nConfig } from '../../config/i18n';
+import { getLocaleFromPath, getLocaleConfig, getLocalePrefix } from '../../utils/i18n';
+
+// Get i18n config
+const i18nConfig = virtualI18nConfig || defaultI18nConfig;
+const currentLocale = getLocaleFromPath(Astro.url.pathname, i18nConfig);
+const localeConfig = getLocaleConfig(currentLocale, i18nConfig);
+const ui = localeConfig.ui;
+const localePrefix = getLocalePrefix(currentLocale, i18nConfig);
 
 // 获取所有非草稿的 slides
 const slides = (await getCollection('slides', ({ data }) => !data.draft))
@@ -20,28 +30,37 @@ function formatDate(date: Date | undefined): string {
 }
 ---
 
-<PageLayout title="幻灯片" description="演示文稿列表" showSidebar={false}>
+<PageLayout title={ui.slides} description={ui.slidesList} showSidebar={false} i18nConfig={i18nConfig}>
+  <!-- 面包屑导航 -->
+  <nav class="flex items-center space-x-2 text-sm text-slate-600 dark:text-slate-400 mb-8">
+    <a href={`${localePrefix}/`} class="hover:text-primary-500 transition-colors">{ui.home}</a>
+    <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+      <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7" />
+    </svg>
+    <span class="text-slate-900 dark:text-slate-100">{ui.slides}</span>
+  </nav>
+
   <div class="slides-list-page">
     <header class="mb-8">
       <h1 class="text-3xl font-bold text-slate-900 dark:text-slate-100 mb-2">
-        <span class="mr-2">📽️</span>幻灯片
+        {ui.slides}
       </h1>
       <p class="text-slate-600 dark:text-slate-400">
-        基于 Reveal.js 的演示文稿，支持 Markdown 语法
+        {ui.slidesList}
       </p>
     </header>
 
     {slides.length === 0 ? (
       <div class="text-center py-16 text-slate-500 dark:text-slate-400">
         <div class="text-6xl mb-4">📭</div>
-        <p>暂无幻灯片</p>
-        <p class="text-sm mt-2">在 <code class="px-2 py-1 bg-slate-100 dark:bg-slate-800 rounded">content/slides/</code> 目录下创建 Markdown 文件即可开始</p>
+        <p>{ui.noPostsFound}</p>
+        <p class="text-sm mt-2">content/slides/</p>
       </div>
     ) : (
       <div class="grid gap-6 md:grid-cols-2">
         {slides.map((slide) => (
           <a
-            href={`/slides/${slide.id}`}
+            href={`${localePrefix}/slides/${slide.id}`}
             class="slide-card group block p-6 bg-white dark:bg-slate-800 rounded-xl border border-slate-200 dark:border-slate-700 hover:border-primary-500 dark:hover:border-primary-500 transition-all hover:shadow-lg hover:-translate-y-1"
           >
             <div class="flex items-start justify-between mb-3">

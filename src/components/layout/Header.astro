@@ -6,6 +6,7 @@ import MobileMenu from '../ui/MobileMenu.vue';
 import LanguageSwitcher from '../ui/LanguageSwitcher.vue';
 import type { I18nConfig } from '../../config/i18n';
 import { defaultI18nConfig } from '../../config/i18n';
+import { i18nConfig as virtualI18nConfig } from 'virtual:astro-blog-i18n';
 import {
   getLocaleFromPath,
   getLocaleConfig,
@@ -17,7 +18,7 @@ export interface Props {
   i18nConfig?: I18nConfig;
 }
 
-const { i18nConfig = defaultI18nConfig } = Astro.props;
+const { i18nConfig = virtualI18nConfig || defaultI18nConfig } = Astro.props;
 
 const currentPath = Astro.url.pathname;
 const currentLocale = getLocaleFromPath(currentPath, i18nConfig);
@@ -55,11 +56,13 @@ const localesForSwitcher = i18nConfig.locales.map(l => ({
           )}
           <div class="hidden sm:block">
             <h1 class="text-xl font-bold text-slate-900 dark:text-slate-100">
-              {localeSiteConfig.title || siteConfig.title}
+              {localeSiteConfig.title ?? siteConfig.title}
             </h1>
-            <p class="text-xs text-slate-600 dark:text-slate-400 -mt-1">
-              {localeSiteConfig.description || siteConfig.description}
-            </p>
+            {(localeSiteConfig.description ?? siteConfig.description) && (
+              <p class="text-xs text-slate-600 dark:text-slate-400 -mt-1">
+                {localeSiteConfig.description ?? siteConfig.description}
+              </p>
+            )}
           </div>
         </a>
       </div>
@@ -85,6 +88,7 @@ const localesForSwitcher = i18nConfig.locales.map(l => ({
             client:load
             placeholder={ui.searchPlaceholder}
             searchLabel={ui.search}
+            noResultsText={ui.noResults}
           />
         </div>
 

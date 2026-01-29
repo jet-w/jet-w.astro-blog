@@ -3,13 +3,31 @@
  * 首页统计信息组件
  */
 import { getCollection } from 'astro:content';
+import type { I18nConfig } from '../../config/i18n';
+import { defaultI18nConfig } from '../../config/i18n';
+import { i18nConfig as virtualI18nConfig } from 'virtual:astro-blog-i18n';
+import { getLocaleFromPath, getLocaleConfig, filterPostsByLocale } from '../../utils/i18n';
+
+export interface Props {
+  i18nConfig?: I18nConfig;
+}
+
+const { i18nConfig = virtualI18nConfig || defaultI18nConfig } = Astro.props;
+
+// Get current locale from URL
+const currentLocale = getLocaleFromPath(Astro.url.pathname, i18nConfig);
+const localeConfig = getLocaleConfig(currentLocale, i18nConfig);
+const ui = localeConfig.ui;
 
 const allPosts = await getCollection('posts');
 const publishedPosts = allPosts.filter(post => !post.data.draft);
 
-const totalPosts = publishedPosts.length;
-const allTags = new Set(publishedPosts.flatMap(post => post.data.tags || []));
-const allCategories = new Set(publishedPosts.flatMap(post => post.data.categories || []));
+// Filter posts by current locale
+const localePosts = filterPostsByLocale(publishedPosts, currentLocale, i18nConfig);
+
+const totalPosts = localePosts.length;
+const allTags = new Set(localePosts.flatMap(post => post.data.tags || []));
+const allCategories = new Set(localePosts.flatMap(post => post.data.categories || []));
 const totalTags = allTags.size;
 const totalCategories = allCategories.size;
 ---
@@ -21,7 +39,7 @@ const totalCategories = allCategories.size;
         {totalPosts}
       </div>
       <div class="text-sm text-slate-600 dark:text-slate-400">
-        文章总数
+        {ui.posts}
       </div>
     </div>
     <div class="card text-center">
@@ -29,7 +47,7 @@ const totalCategories = allCategories.size;
         {totalTags}
       </div>
       <div class="text-sm text-slate-600 dark:text-slate-400">
-        标签数量
+        {ui.tags}
       </div>
     </div>
     <div class="card text-center">
@@ -37,7 +55,7 @@ const totalCategories = allCategories.size;
         {totalCategories}
       </div>
       <div class="text-sm text-slate-600 dark:text-slate-400">
-        分类数量
+        {ui.categories}
       </div>
     </div>
   </div>

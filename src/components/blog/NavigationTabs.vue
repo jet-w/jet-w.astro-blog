@@ -26,7 +26,7 @@
         <a
           v-for="tag in tags"
           :key="tag.name"
-          :href="`/tags/${encodeTag(tag.name)}`"
+          :href="`${props.localePrefix}/tags/${encodeTag(tag.name)}`"
           class="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full text-sm transition-colors"
           :class="getTagColorClass(tag.count)"
         >
@@ -40,7 +40,7 @@
         <a
           v-for="archive in archives"
           :key="archive.key"
-          :href="`/archives/${archive.year}/${archive.month}`"
+          :href="`${props.localePrefix}/archives/${archive.year}/${archive.month}`"
           class="flex items-center justify-between px-3 py-2 rounded-lg hover:bg-slate-50 dark:hover:bg-slate-700/50 transition-colors group"
         >
           <div class="flex items-center gap-3">
@@ -48,11 +48,11 @@
               <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
             </svg>
             <span class="text-slate-700 dark:text-slate-300 group-hover:text-primary-600 dark:group-hover:text-primary-400">
-              {{ archive.year }}年{{ archive.month }}月
+              {{ formatArchiveDate(archive.year, archive.month) }}
             </span>
           </div>
           <span class="text-xs text-slate-400 bg-slate-100 dark:bg-slate-700 px-2 py-0.5 rounded-full">
-            {{ archive.count }}篇
+            {{ archive.count }} {{ props.ui?.postsCount || 'posts' }}
           </span>
         </a>
       </div>
@@ -62,7 +62,7 @@
         <a
           v-for="category in categories"
           :key="category.name"
-          :href="`/categories/${encodeCategory(category.name)}`"
+          :href="`${props.localePrefix}/categories/${encodeCategory(category.name)}`"
           class="flex items-center justify-between px-3 py-2 rounded-lg hover:bg-slate-50 dark:hover:bg-slate-700/50 transition-colors group"
         >
           <div class="flex items-center gap-3">
@@ -74,7 +74,7 @@
             </span>
           </div>
           <span class="text-xs text-slate-400 bg-slate-100 dark:bg-slate-700 px-2 py-0.5 rounded-full">
-            {{ category.count }}篇
+            {{ category.count }} {{ props.ui?.postsCount || 'posts' }}
           </span>
         </a>
       </div>
@@ -86,7 +86,7 @@
           <div v-for="item in timeline" :key="item.slug" class="relative pl-10">
             <div class="absolute left-2.5 w-3 h-3 rounded-full bg-primary-500 border-2 border-white dark:border-slate-800"></div>
             <a
-              :href="`/posts/${item.slug}`"
+              :href="`${props.localePrefix}/posts/${item.slug}`"
               class="block p-3 rounded-lg hover:bg-slate-50 dark:hover:bg-slate-700/50 transition-colors group"
             >
               <div class="text-xs text-slate-400 mb-1">{{ formatDate(item.pubDate) }}</div>
@@ -97,10 +97,10 @@
           </div>
         </div>
         <a
-          href="/archives"
+          :href="`${props.localePrefix}/archives`"
           class="mt-4 flex items-center justify-center gap-2 py-2 text-sm text-primary-500 hover:text-primary-600 dark:hover:text-primary-400 transition-colors"
         >
-          <span>查看全部时间轴</span>
+          <span>{{ props.ui?.viewAllTimeline || 'View all timeline' }}</span>
           <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7" />
           </svg>
@@ -136,14 +136,37 @@ interface TimelineItem {
   pubDate: string
 }
 
+interface UIProps {
+  tags?: string
+  archives?: string
+  categories?: string
+  timeline?: string
+  viewAllTimeline?: string
+  postsCount?: string
+}
+
 interface Props {
   tags: TagItem[]
   archives: ArchiveItem[]
   categories: CategoryItem[]
   timeline: TimelineItem[]
+  localePrefix?: string
+  dateLocale?: string
+  ui?: UIProps
 }
 
-const props = defineProps<Props>()
+const props = withDefaults(defineProps<Props>(), {
+  localePrefix: '',
+  dateLocale: 'en',
+  ui: () => ({
+    tags: 'Tags',
+    archives: 'Archives',
+    categories: 'Categories',
+    timeline: 'Timeline',
+    viewAllTimeline: 'View all timeline',
+    postsCount: 'posts',
+  })
+})
 
 const activeTab = ref('tags')
 
@@ -201,10 +224,10 @@ const TimelineIcon = {
 }
 
 const tabs = computed(() => [
-  { id: 'tags', name: '标签', count: props.tags.length, icon: TagIcon },
-  { id: 'archives', name: '归档', count: props.archives.length, icon: ArchiveIcon },
-  { id: 'categories', name: '分类', count: props.categories.length, icon: CategoryIcon },
-  { id: 'timeline', name: '时间轴', count: props.timeline.length, icon: TimelineIcon },
+  { id: 'tags', name: props.ui?.tags || 'Tags', count: props.tags.length, icon: TagIcon },
+  { id: 'archives', name: props.ui?.archives || 'Archives', count: props.archives.length, icon: ArchiveIcon },
+  { id: 'categories', name: props.ui?.categories || 'Categories', count: props.categories.length, icon: CategoryIcon },
+  { id: 'timeline', name: props.ui?.timeline || 'Timeline', count: props.timeline.length, icon: TimelineIcon },
 ])
 
 const encodeTag = (tag: string) => {
@@ -227,10 +250,18 @@ const getTagColorClass = (count: number) => {
 
 const formatDate = (dateStr: string) => {
   const date = new Date(dateStr)
-  return new Intl.DateTimeFormat('zh-CN', {
+  return new Intl.DateTimeFormat(props.dateLocale, {
     year: 'numeric',
     month: '2-digit',
     day: '2-digit'
+  }).format(date)
+}
+
+const formatArchiveDate = (year: string, month: string) => {
+  const date = new Date(parseInt(year), parseInt(month) - 1, 1)
+  return new Intl.DateTimeFormat(props.dateLocale, {
+    year: 'numeric',
+    month: 'long'
   }).format(date)
 }
 </script>

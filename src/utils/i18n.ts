@@ -364,6 +364,48 @@ export function getLocalePrefix(
   return `/${locale}`;
 }
 
+/**
+ * Get content path prefix for a specific locale
+ * Returns the contentPathPrefix from locale config, or undefined if not set
+ */
+export function getContentPathPrefix(
+  locale: string,
+  config: I18nConfig = defaultI18nConfig
+): string | undefined {
+  const localeConfig = config.localeConfigs[locale];
+  return localeConfig?.contentPathPrefix;
+}
+
+/**
+ * Filter posts by locale based on contentPathPrefix
+ * If contentPathPrefix is set, only return posts that start with that prefix
+ * If not set, return all posts (backward compatible)
+ *
+ * @example
+ * // If en locale has contentPathPrefix: 'blog_docs_en'
+ * filterPostsByLocale(posts, 'en', config)
+ * // Returns only posts with id starting with 'blog_docs_en/'
+ */
+export function filterPostsByLocale<T extends { id: string }>(
+  posts: T[],
+  locale: string,
+  config: I18nConfig = defaultI18nConfig
+): T[] {
+  const contentPathPrefix = getContentPathPrefix(locale, config);
+
+  // If no contentPathPrefix is set, return all posts (backward compatible)
+  if (!contentPathPrefix) {
+    return posts;
+  }
+
+  // Filter posts that start with the content path prefix
+  return posts.filter((post) => {
+    const postPath = post.id.toLowerCase();
+    const prefix = contentPathPrefix.toLowerCase();
+    return postPath.startsWith(prefix + '/') || postPath === prefix;
+  });
+}
+
 // Re-export types and config functions
 export type { I18nConfig, Locale, LocaleConfig, UITranslations } from '../config/i18n';
 export {

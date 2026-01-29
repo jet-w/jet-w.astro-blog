@@ -2,9 +2,22 @@
 import { getCollection } from 'astro:content';
 import PageLayout from '@jet-w/astro-blog/layouts/PageLayout.astro';
 import TagCloud from '@jet-w/astro-blog/components/blog/TagCloud.astro';
+import { i18nConfig as virtualI18nConfig } from 'virtual:astro-blog-i18n';
+import { defaultI18nConfig } from '../../config/i18n';
+import { getLocaleFromPath, getLocaleConfig, getLocalePrefix, filterPostsByLocale } from '../../utils/i18n';
+
+// Get i18n config
+const i18nConfig = virtualI18nConfig || defaultI18nConfig;
+const currentLocale = getLocaleFromPath(Astro.url.pathname, i18nConfig);
+const localeConfig = getLocaleConfig(currentLocale, i18nConfig);
+const ui = localeConfig.ui;
+const localePrefix = getLocalePrefix(currentLocale, i18nConfig);
 
 // 从文章集合动态获取所有标签
-const allPosts = await getCollection('posts', ({ data }) => !data.draft);
+const allPostsCollection = await getCollection('posts', ({ data }) => !data.draft);
+
+// Filter posts by current locale
+const allPosts = filterPostsByLocale(allPostsCollection, currentLocale, i18nConfig);
 
 // 统计标签
 const tagMap = new Map<string, { name: string; count: number }>();
@@ -54,44 +67,54 @@ const sortedGroups = Object.entries(groupedByLetter).sort(([a], [b]) => {
 ---
 
 <PageLayout
-  title="标签"
-  description="按标签浏览文章"
+  title={ui.allTags}
+  description={ui.allTags}
   showSidebar={true}
+  i18nConfig={i18nConfig}
 >
+  <!-- 面包屑导航 -->
+  <nav class="flex items-center space-x-2 text-sm text-slate-600 dark:text-slate-400 mb-8">
+    <a href={`${localePrefix}/`} class="hover:text-primary-500 transition-colors">{ui.home}</a>
+    <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+      <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7" />
+    </svg>
+    <span class="text-slate-900 dark:text-slate-100">{ui.allTags}</span>
+  </nav>
+
   <!-- 页面头部 -->
   <div class="text-center mb-12">
     <h1 class="text-4xl font-bold text-slate-900 dark:text-slate-100 mb-4">
-      文章标签
+      {ui.allTags}
     </h1>
     <p class="text-xl text-slate-600 dark:text-slate-400 mb-8">
-      按标签分类浏览所有文章
+      {ui.filterByTag}
     </p>
 
     <!-- 统计信息 -->
     <div class="inline-flex items-center space-x-6 text-sm text-slate-500 dark:text-slate-400 bg-slate-50 dark:bg-slate-800 px-6 py-3 rounded-lg">
-      <span>共 {allTags.length} 个标签</span>
+      <span>{allTags.length} {ui.tags}</span>
       <span>•</span>
-      <span>{totalPosts} 篇文章</span>
+      <span>{totalPosts} {ui.posts}</span>
     </div>
   </div>
 
   <!-- 标签云 -->
   <section class="mb-16">
     <h2 class="text-2xl font-bold text-slate-900 dark:text-slate-100 mb-8">
-      标签云
+      {ui.tags}
     </h2>
-    <TagCloud tags={allTags} />
+    <TagCloud tags={allTags} localePrefix={localePrefix} />
   </section>
 
   <!-- 热门标签 -->
   <section class="mb-16">
     <h2 class="text-2xl font-bold text-slate-900 dark:text-slate-100 mb-8">
-      热门标签
+      {ui.popularTags}
     </h2>
     <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
       {sortedTags.slice(0, 9).map((tag) => (
         <a
-          href={`/tags/${tag.slug}`}
+          href={`${localePrefix}/tags/${tag.slug}`}
           class="group card hover:shadow-lg transform hover:-translate-y-1 transition-all duration-300"
         >
           <div class="flex items-center justify-between">
@@ -100,7 +123,7 @@ const sortedGroups = Object.entries(groupedByLetter).sort(([a], [b]) => {
                 {tag.name}
               </h3>
               <p class="text-sm text-slate-600 dark:text-slate-400">
-                {tag.count} 篇文章
+                {tag.count} {ui.posts}
               </p>
             </div>
             <div class="text-3xl font-bold text-primary-500 opacity-80">
@@ -121,12 +144,12 @@ const sortedGroups = Object.entries(groupedByLetter).sort(([a], [b]) => {
   <!-- 所有标签 -->
   <section class="mb-16">
     <h2 class="text-2xl font-bold text-slate-900 dark:text-slate-100 mb-8">
-      所有标签
+      {ui.allTags}
     </h2>
     <div class="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
       {sortedTags.map((tag) => (
         <a
-          href={`/tags/${tag.slug}`}
+          href={`${localePrefix}/tags/${tag.slug}`}
           class="flex items-center justify-between p-4 bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-lg hover:shadow-md hover:border-primary-300 dark:hover:border-primary-600 transition-all duration-200 group"
         >
           <span class="font-medium text-slate-900 dark:text-slate-100 group-hover:text-primary-500 transition-colors">
@@ -143,7 +166,7 @@ const sortedGroups = Object.entries(groupedByLetter).sort(([a], [b]) => {
   <!-- 按字母分组 -->
   <section>
     <h2 class="text-2xl font-bold text-slate-900 dark:text-slate-100 mb-8">
-      按首字母分组
+      {ui.tags}
     </h2>
     {sortedGroups.map(([letter, tags]) => (
       <div class="mb-6">
@@ -153,7 +176,7 @@ const sortedGroups = Object.entries(groupedByLetter).sort(([a], [b]) => {
         <div class="flex flex-wrap gap-2">
           {tags.sort((a, b) => b.count - a.count).map((tag) => (
             <a
-              href={`/tags/${tag.slug}`}
+              href={`${localePrefix}/tags/${tag.slug}`}
               class="inline-flex items-center px-3 py-1 bg-slate-100 dark:bg-slate-800 hover:bg-primary-100 dark:hover:bg-primary-900/30 text-slate-700 dark:text-slate-300 hover:text-primary-700 dark:hover:text-primary-300 rounded-full transition-colors text-sm"
             >
               {tag.name}

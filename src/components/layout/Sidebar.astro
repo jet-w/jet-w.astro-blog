@@ -10,7 +10,7 @@ import {
 } from '@jet-w/astro-blog/utils/sidebar';
 import type { I18nConfig } from '../../config/i18n';
 import { defaultI18nConfig } from '../../config/i18n';
-import { getLocaleFromPath, getLocaleConfig, getLocalePrefix, formatDate } from '../../utils/i18n';
+import { getLocaleFromPath, getLocaleConfig, getLocalePrefix, formatDate, filterPostsByLocale } from '../../utils/i18n';
 
 interface Props {
   currentPath?: string;
@@ -31,26 +31,29 @@ const sidebarConfig = localeConfig.sidebar;
 // 获取所有文章
 const allPosts = await getCollection('posts', ({ data }) => !data.draft);
 
+// Filter posts by current locale for sidebar widgets
+const localePosts = filterPostsByLocale(allPosts, currentLocale, i18nConfig);
+
 // 根据当前路径过滤侧边栏组
 const filteredGroups = filterGroupsByPath(sidebarConfig.groups, currentPath);
 
 // 创建过滤后的配置
 const filteredConfig = { ...sidebarConfig, groups: filteredGroups };
 
-// 处理侧边栏配置
-const processedGroups = await processSidebarConfig(filteredConfig, allPosts);
+// 处理侧边栏配置 - 使用按语言过滤后的文章
+const processedGroups = await processSidebarConfig(filteredConfig, localePosts);
 
-// 获取其他数据
+// 获取其他数据 - 使用按语言过滤后的文章
 const recentPosts = sidebarConfig.showRecentPosts
-  ? getRecentPosts(allPosts, sidebarConfig.recentPostsCount)
+  ? getRecentPosts(localePosts, sidebarConfig.recentPostsCount)
   : [];
 
 const popularTags = sidebarConfig.showPopularTags
-  ? getPopularTags(allPosts, sidebarConfig.popularTagsCount)
+  ? getPopularTags(localePosts, sidebarConfig.popularTagsCount)
   : [];
 
 const archives = sidebarConfig.showArchives
-  ? getArchives(allPosts, sidebarConfig.archivesCount)
+  ? getArchives(localePosts, sidebarConfig.archivesCount)
   : [];
 ---
 
@@ -197,7 +200,7 @@ const archives = sidebarConfig.showArchives
                                                 </a>
                                               ) : (
                                                 <a
-                                                  href={`/posts/${item.slug?.toLowerCase()}`}
+                                                  href={`${localePrefix}/posts/${item.slug?.toLowerCase()}`}
                                                   class="tree-file flex items-center gap-2 px-2 py-1.5 rounded-lg hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors"
                                                   title={item.title}
                                                 >
@@ -238,7 +241,7 @@ const archives = sidebarConfig.showArchives
                                       </a>
                                     ) : (
                                       <a
-                                        href={`/posts/${grandChild.slug?.toLowerCase()}`}
+                                        href={`${localePrefix}/posts/${grandChild.slug?.toLowerCase()}`}
                                         class="tree-file flex items-center gap-2 px-2 py-1.5 rounded-lg hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors"
                                         title={grandChild.title}
                                       >
@@ -289,7 +292,7 @@ const archives = sidebarConfig.showArchives
                             </a>
                           ) : (
                             <a
-                              href={`/posts/${child.slug?.toLowerCase()}`}
+                              href={`${localePrefix}/posts/${child.slug?.toLowerCase()}`}
                               class="tree-file flex items-center gap-2 px-2 py-1.5 rounded-lg hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors"
                               title={child.title}
                             >
@@ -340,7 +343,7 @@ const archives = sidebarConfig.showArchives
                   </a>
                 ) : (
                   <a
-                    href={`/posts/${node.slug?.toLowerCase()}`}
+                    href={`${localePrefix}/posts/${node.slug?.toLowerCase()}`}
                     class="tree-file flex items-center gap-2 px-2 py-1.5 rounded-lg hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors"
                     title={node.title}
                   >

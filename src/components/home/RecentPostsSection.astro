@@ -4,19 +4,33 @@
  */
 import PostCard from '../../components/blog/PostCard.astro';
 import { getCollection } from 'astro:content';
+import type { I18nConfig } from '../../config/i18n';
+import { defaultI18nConfig } from '../../config/i18n';
+import { i18nConfig as virtualI18nConfig } from 'virtual:astro-blog-i18n';
+import { getLocaleFromPath, getLocaleConfig, getLocalePrefix, filterPostsByLocale } from '../../utils/i18n';
 
 export interface Props {
   count?: number;
+  i18nConfig?: I18nConfig;
 }
 
-const { count = 6 } = Astro.props;
+const { count = 6, i18nConfig = virtualI18nConfig || defaultI18nConfig } = Astro.props;
+
+// Get current locale from URL
+const currentLocale = getLocaleFromPath(Astro.url.pathname, i18nConfig);
+const localeConfig = getLocaleConfig(currentLocale, i18nConfig);
+const ui = localeConfig.ui;
+const localePrefix = getLocalePrefix(currentLocale, i18nConfig);
 
 const allPosts = await getCollection('posts');
 const publishedPosts = allPosts
   .filter(post => !post.data.draft)
   .sort((a, b) => (b.data.pubDate?.getTime() ?? 0) - (a.data.pubDate?.getTime() ?? 0));
 
-const recentPosts = publishedPosts.slice(0, count).map(post => ({
+// Filter posts by current locale
+const localePosts = filterPostsByLocale(publishedPosts, currentLocale, i18nConfig);
+
+const recentPosts = localePosts.slice(0, count).map(post => ({
   slug: post.id.toLowerCase(),
   title: post.data.title,
   description: post.data.description,
@@ -26,18 +40,20 @@ const recentPosts = publishedPosts.slice(0, count).map(post => ({
   author: post.data.author,
   readingTime: 5
 }));
+
+const postsUrl = `${localePrefix}/posts`;
 ---
 
 <section class="mb-16">
   <div class="flex items-center justify-between mb-8">
     <h2 class="text-2xl font-bold text-slate-900 dark:text-slate-100">
-      最新文章
+      {ui.recentPosts}
     </h2>
     <a
-      href="/posts"
+      href={postsUrl}
       class="text-primary-500 hover:text-primary-600 dark:hover:text-primary-400 font-medium text-sm flex items-center space-x-1 transition-colors"
     >
-      <span>查看全部</span>
+      <span>{ui.allPosts}</span>
       <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7" />
       </svg>
@@ -46,7 +62,7 @@ const recentPosts = publishedPosts.slice(0, count).map(post => ({
 
   <div class="space-y-6">
     {recentPosts.map((post) => (
-      <PostCard post={post} layout="horizontal" />
+      <PostCard post={post} layout="horizontal" localePrefix={localePrefix} />
     ))}
   </div>
 </section>

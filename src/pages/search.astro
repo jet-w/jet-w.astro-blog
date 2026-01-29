@@ -1,47 +1,83 @@
 ---
 import PageLayout from '@jet-w/astro-blog/layouts/PageLayout.astro';
 import SearchInterface from '@jet-w/astro-blog/components/ui/SearchInterface.vue';
+import type { I18nConfig } from '../config/i18n';
+import { defaultI18nConfig } from '../config/i18n';
+import { i18nConfig as virtualI18nConfig } from 'virtual:astro-blog-i18n';
+import { getLocaleFromPath, getLocaleConfig } from '../utils/i18n';
+
+export interface Props {
+  i18nConfig?: I18nConfig;
+}
+
+const { i18nConfig = virtualI18nConfig || defaultI18nConfig } = Astro.props;
+
+// Get current locale from URL
+const currentLocale = getLocaleFromPath(Astro.url.pathname, i18nConfig);
+const localeConfig = getLocaleConfig(currentLocale, i18nConfig);
+const ui = localeConfig.ui;
+
+// Get date locale for formatting
+const locale = i18nConfig.locales.find(l => l.code === currentLocale);
+const dateLocale = locale?.dateLocale || 'zh-CN';
 ---
 
 <PageLayout
-  title="搜索"
-  description="搜索博客文章和内容"
+  title={ui.search}
+  description={ui.searchInAllArticles}
   showSidebar={true}
 >
   <div class="max-w-4xl mx-auto">
     <!-- 页面头部 -->
     <div class="text-center mb-12">
       <h1 class="text-4xl font-bold text-slate-900 dark:text-slate-100 mb-4">
-        搜索文章
+        {ui.searchArticles}
       </h1>
       <p class="text-xl text-slate-600 dark:text-slate-400">
-        在所有文章中查找您感兴趣的内容
+        {ui.searchInAllArticles}
       </p>
     </div>
 
     <!-- 搜索界面 -->
-    <SearchInterface client:load />
+    <SearchInterface
+      client:load
+      placeholder={ui.searchPlaceholder}
+      noResults={ui.noResults}
+      tags={ui.tags}
+      categories={ui.categories}
+      sortLabel={ui.sortBy}
+      relevance={ui.sortByDate}
+      publishTime={ui.publishedOn}
+      titleLabel={ui.sortByTitle}
+      all={ui.allPosts}
+      searching={ui.searching}
+      noResultsTitle={ui.noResults}
+      clearSearch={ui.clearFilter}
+      previousPage={ui.previousPage}
+      nextPage={ui.nextPage}
+      dateLocale={dateLocale}
+    />
 
     <!-- 搜索提示 -->
     <div class="mt-12 p-6 bg-slate-50 dark:bg-slate-800 rounded-xl">
       <h2 class="text-lg font-semibold text-slate-900 dark:text-slate-100 mb-4">
-        搜索技巧
+        {ui.searchTips}
       </h2>
       <div class="grid grid-cols-1 md:grid-cols-2 gap-4 text-sm text-slate-600 dark:text-slate-400">
         <div>
-          <h3 class="font-medium text-slate-900 dark:text-slate-100 mb-2">基础搜索</h3>
+          <h3 class="font-medium text-slate-900 dark:text-slate-100 mb-2">{ui.basicSearch}</h3>
           <ul class="space-y-1">
-            <li>• 输入关键词搜索标题和内容</li>
-            <li>• 支持中英文混合搜索</li>
-            <li>• 自动忽略大小写</li>
+            <li>• {ui.searchTipKeyword}</li>
+            <li>• {ui.searchTipMixedLang}</li>
+            <li>• {ui.searchTipCaseInsensitive}</li>
           </ul>
         </div>
         <div>
-          <h3 class="font-medium text-slate-900 dark:text-slate-100 mb-2">高级功能</h3>
+          <h3 class="font-medium text-slate-900 dark:text-slate-100 mb-2">{ui.advancedFeatures}</h3>
           <ul class="space-y-1">
-            <li>• 实时搜索建议</li>
-            <li>• 按标签和分类筛选</li>
-            <li>• 支持模糊匹配</li>
+            <li>• {ui.searchTipRealtime}</li>
+            <li>• {ui.searchTipFilter}</li>
+            <li>• {ui.searchTipFuzzy}</li>
           </ul>
         </div>
       </div>

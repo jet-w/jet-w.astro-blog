@@ -29,6 +29,8 @@ export {
   getTextDirection,
   isMultiLanguageEnabled,
   getLocalePrefix,
+  getContentPathPrefix,
+  filterPostsByLocale,
   type MergedLocaleConfig,
   type AlternateLink,
 } from './utils/i18n';

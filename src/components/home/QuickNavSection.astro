@@ -4,10 +4,29 @@
  */
 import NavigationTabs from '../../components/blog/NavigationTabs.vue';
 import { getCollection } from 'astro:content';
+import type { I18nConfig } from '../../config/i18n';
+import { defaultI18nConfig } from '../../config/i18n';
+import { i18nConfig as virtualI18nConfig } from 'virtual:astro-blog-i18n';
+import { getLocaleFromPath, getLocaleConfig, getLocalePrefix, filterPostsByLocale } from '../../utils/i18n';
 
-const allPosts = await getCollection('posts');
-const publishedPosts = allPosts
-  .filter(post => !post.data.draft)
+interface Props {
+  i18nConfig?: I18nConfig;
+}
+
+const { i18nConfig = virtualI18nConfig || defaultI18nConfig } = Astro.props;
+
+// Get current locale and translations
+const currentLocale = getLocaleFromPath(Astro.url.pathname, i18nConfig);
+const localeConfig = getLocaleConfig(currentLocale, i18nConfig);
+const ui = localeConfig.ui;
+const localePrefix = getLocalePrefix(currentLocale, i18nConfig);
+
+const allPosts = await getCollection('posts', ({ data }) => !data.draft);
+
+// Filter posts by locale
+const localePosts = filterPostsByLocale(allPosts, currentLocale, i18nConfig);
+
+const publishedPosts = localePosts
   .sort((a, b) => (b.data.pubDate?.getTime() ?? 0) - (a.data.pubDate?.getTime() ?? 0));
 
 const posts = publishedPosts.map(post => ({
@@ -68,7 +87,7 @@ const timelineData = posts.slice(0, 10).map(post => ({
 <section class="mb-16">
   <div class="flex items-center justify-between mb-8">
     <h2 class="text-2xl font-bold text-slate-900 dark:text-slate-100">
-      快速导航
+      {ui.quickNavigation}
     </h2>
   </div>
   <NavigationTabs
@@ -77,5 +96,15 @@ const timelineData = posts.slice(0, 10).map(post => ({
     archives={archivesData}
     categories={categoriesData}
     timeline={timelineData}
+    localePrefix={localePrefix}
+    dateLocale={localeConfig.locale?.dateLocale || currentLocale}
+    ui={{
+      tags: ui.tags,
+      archives: ui.archives,
+      categories: ui.categories,
+      timeline: ui.timeline,
+      viewAllTimeline: ui.viewAllTimeline,
+      postsCount: ui.postsCount,
+    }}
   />
 </section>

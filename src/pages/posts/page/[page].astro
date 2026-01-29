@@ -3,6 +3,9 @@ import PageLayout from '@jet-w/astro-blog/layouts/PageLayout.astro';
 import PostCard from '@jet-w/astro-blog/components/blog/PostCard.astro';
 import Pagination from '@jet-w/astro-blog/components/ui/Pagination.astro';
 import { getCollection } from 'astro:content';
+import { i18nConfig as virtualI18nConfig } from 'virtual:astro-blog-i18n';
+import { defaultI18nConfig } from '../../../config/i18n';
+import { getLocaleFromPath, getLocaleConfig, getLocalePrefix, filterPostsByLocale } from '../../../utils/i18n';
 
 export async function getStaticPaths() {
   const allPostsCollection = await getCollection('posts');
@@ -20,9 +23,20 @@ export async function getStaticPaths() {
 const { page } = Astro.params;
 const currentPage = parseInt(page as string, 10);
 
+// Get i18n config
+const i18nConfig = virtualI18nConfig || defaultI18nConfig;
+const currentLocale = getLocaleFromPath(Astro.url.pathname, i18nConfig);
+const localeConfig = getLocaleConfig(currentLocale, i18nConfig);
+const ui = localeConfig.ui;
+const localePrefix = getLocalePrefix(currentLocale, i18nConfig);
+
 // 从新的内容目录获取文章数据
 const allPostsCollection = await getCollection('posts');
-const publishedPosts = allPostsCollection
+
+// Filter posts by current locale
+const localeFilteredPosts = filterPostsByLocale(allPostsCollection, currentLocale, i18nConfig);
+
+const publishedPosts = localeFilteredPosts
   .filter(post => !post.data.draft)
   .sort((a, b) => (b.data.pubDate?.getTime() ?? 0) - (a.data.pubDate?.getTime() ?? 0));
 
@@ -52,27 +66,41 @@ const allCategories = [...new Set(allPosts.flatMap(post => post.categories || []
 ---
 
 <PageLayout
-  title={`文章列表 - 第 ${currentPage} 页`}
-  description="浏览所有技术文章和分享内容"
+  title={`${ui.postList} - ${ui.page} ${currentPage}`}
+  description={localeConfig.site.description}
   showSidebar={true}
+  i18nConfig={i18nConfig}
 >
+  <!-- 面包屑导航 -->
+  <nav class="flex items-center space-x-2 text-sm text-slate-600 dark:text-slate-400 mb-8">
+    <a href={`${localePrefix}/`} class="hover:text-primary-500 transition-colors">{ui.home}</a>
+    <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+      <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7" />
+    </svg>
+    <a href={`${localePrefix}/posts`} class="hover:text-primary-500 transition-colors">{ui.postList}</a>
+    <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+      <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7" />
+    </svg>
+    <span class="text-slate-900 dark:text-slate-100">{ui.page} {currentPage}</span>
+  </nav>
+
   <!-- 页面头部 -->
   <div class="mb-12">
     <div class="text-center">
       <h1 class="text-4xl font-bold text-slate-900 dark:text-slate-100 mb-4">
-        文章列表
+        {ui.postList}
       </h1>
       <p class="text-xl text-slate-600 dark:text-slate-400 mb-8">
-        分享技术思考和学习心得
+        {localeConfig.site.description}
       </p>
 
       <!-- 统计信息 -->
       <div class="inline-flex items-center space-x-6 text-sm text-slate-500 dark:text-slate-400 bg-slate-50 dark:bg-slate-800 px-6 py-3 rounded-lg">
-        <span>共 {totalPosts} 篇文章</span>
+        <span>{totalPosts} {ui.posts}</span>
         <span>•</span>
-        <span>{allTags.length} 个标签</span>
+        <span>{allTags.length} {ui.tags}</span>
         <span>•</span>
-        <span>{allCategories.length} 个分类</span>
+        <span>{allCategories.length} {ui.categories}</span>
       </div>
     </div>
   </div>
@@ -83,34 +111,44 @@ const allCategories = [...new Set(allPosts.flatMap(post => post.categories || []
       <!-- 按标签筛选 -->
       <div>
         <h3 class="text-sm font-semibold text-slate-900 dark:text-slate-100 mb-3">
-          按标签筛选
+          {ui.filterByTag}
         </h3>
         <div class="flex flex-wrap gap-2">
-          <button class="px-3 py-1 text-xs rounded-full bg-primary-100 dark:bg-primary-900/30 text-primary-700 dark:text-primary-300 hover:bg-primary-200 dark:hover:bg-primary-900/50 transition-colors">
-            全部
-          </button>
-          {allTags.map((tag) => (
-            <button class="px-3 py-1 text-xs rounded-full bg-slate-100 dark:bg-slate-700 text-slate-700 dark:text-slate-300 hover:bg-slate-200 dark:hover:bg-slate-600 transition-colors">
+          <a href={`${localePrefix}/tags`} class="px-3 py-1 text-xs rounded-full bg-primary-100 dark:bg-primary-900/30 text-primary-700 dark:text-primary-300 hover:bg-primary-200 dark:hover:bg-primary-900/50 transition-colors">
+            {ui.allTags}
+          </a>
+          {allTags.slice(0, 10).map((tag) => (
+            <a href={`${localePrefix}/tags/${tag.toLowerCase().replace(/\s+/g, '-')}`} class="px-3 py-1 text-xs rounded-full bg-slate-100 dark:bg-slate-700 text-slate-700 dark:text-slate-300 hover:bg-slate-200 dark:hover:bg-slate-600 transition-colors">
               {tag}
-            </button>
+            </a>
           ))}
+          {allTags.length > 10 && (
+            <a href={`${localePrefix}/tags`} class="px-3 py-1 text-xs rounded-full bg-slate-100 dark:bg-slate-700 text-slate-500 dark:text-slate-400 hover:bg-slate-200 dark:hover:bg-slate-600 transition-colors">
+              +{allTags.length - 10}
+            </a>
+          )}
         </div>
       </div>
 
       <!-- 按分类筛选 -->
       <div>
         <h3 class="text-sm font-semibold text-slate-900 dark:text-slate-100 mb-3">
-          按分类筛选
+          {ui.filterByCategory}
         </h3>
         <div class="flex flex-wrap gap-2">
-          <button class="px-3 py-1 text-xs rounded-full bg-primary-100 dark:bg-primary-900/30 text-primary-700 dark:text-primary-300 hover:bg-primary-200 dark:hover:bg-primary-900/50 transition-colors">
-            全部
-          </button>
-          {allCategories.map((category) => (
-            <button class="px-3 py-1 text-xs rounded-full bg-slate-100 dark:bg-slate-700 text-slate-700 dark:text-slate-300 hover:bg-slate-200 dark:hover:bg-slate-600 transition-colors">
+          <a href={`${localePrefix}/categories`} class="px-3 py-1 text-xs rounded-full bg-primary-100 dark:bg-primary-900/30 text-primary-700 dark:text-primary-300 hover:bg-primary-200 dark:hover:bg-primary-900/50 transition-colors">
+            {ui.allCategories}
+          </a>
+          {allCategories.slice(0, 8).map((category) => (
+            <a href={`${localePrefix}/categories/${category.toLowerCase().replace(/\s+/g, '-')}`} class="px-3 py-1 text-xs rounded-full bg-slate-100 dark:bg-slate-700 text-slate-700 dark:text-slate-300 hover:bg-slate-200 dark:hover:bg-slate-600 transition-colors">
               {category}
-            </button>
+            </a>
           ))}
+          {allCategories.length > 8 && (
+            <a href={`${localePrefix}/categories`} class="px-3 py-1 text-xs rounded-full bg-slate-100 dark:bg-slate-700 text-slate-500 dark:text-slate-400 hover:bg-slate-200 dark:hover:bg-slate-600 transition-colors">
+              +{allCategories.length - 8}
+            </a>
+          )}
         </div>
       </div>
     </div>
@@ -118,19 +156,19 @@ const allCategories = [...new Set(allPosts.flatMap(post => post.categories || []
 
   <!-- 文章列表 -->
   {posts.length > 0 ? (
-    <div class="space-y-8 mb-12">
+    <div class="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-12">
       {posts.map((post) => (
-        <PostCard post={post} layout="horizontal" />
+        <PostCard post={post} layout="horizontal" localePrefix={localePrefix} locale={localeConfig.locale.dateLocale} ui={ui} />
       ))}
     </div>
   ) : (
     <div class="text-center py-16">
       <div class="text-6xl mb-4">📝</div>
       <h3 class="text-xl font-semibold text-slate-900 dark:text-slate-100 mb-2">
-        暂无文章
+        {ui.noPostsFound}
       </h3>
       <p class="text-slate-600 dark:text-slate-400">
-        目前还没有发布任何文章，请稍后再来查看。
+        {ui.noPostsFound}
       </p>
     </div>
   )}
@@ -140,7 +178,7 @@ const allCategories = [...new Set(allPosts.flatMap(post => post.categories || []
     <Pagination
       currentPage={currentPage}
       totalPages={totalPages}
-      baseUrl="/posts"
+      baseUrl={`${localePrefix}/posts`}
     />
   )}
 </PageLayout>
