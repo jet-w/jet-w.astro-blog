@@ -325,9 +325,80 @@ const formatDate = (date: Date) => {
     </header>
 
     <!-- 文章内容 -->
-    <div class="prose prose-slate dark:prose-invert max-w-none prose-lg">
+    <div class="prose prose-slate dark:prose-invert max-w-none prose-lg" data-prose-content data-locale-prefix={localePrefix} data-base-url={base}>
       {Content && <Content />}
     </div>
+
+    <!-- 修复文章内容中的链接，添加当前语言前缀 -->
+    <script is:inline>
+      (function() {
+        function fixProseLinks() {
+          const proseContent = document.querySelector('[data-prose-content]');
+          if (!proseContent) return;
+
+          const localePrefix = proseContent.getAttribute('data-locale-prefix') || '';
+          const baseUrl = proseContent.getAttribute('data-base-url') || '';
+
+          // 如果没有 locale prefix 或 locale prefix 等于 base url，则不需要修复
+          // 这意味着当前是默认语言
+          if (!localePrefix || localePrefix === baseUrl) return;
+
+          // 获取 locale 部分 (从 localePrefix 中提取，例如 /base/zh-CN -> zh-CN)
+          const localePart = localePrefix.replace(baseUrl, '').replace(/^\//, '');
+          if (!localePart) return;
+
+          // 修复所有内部链接
+          proseContent.querySelectorAll('a[href]').forEach(function(link) {
+            const href = link.getAttribute('href');
+            if (!href) return;
+
+            // 跳过外部链接、锚点链接、mailto、tel 等
+            if (href.startsWith('http://') ||
+                href.startsWith('https://') ||
+                href.startsWith('//') ||
+                href.startsWith('#') ||
+                href.startsWith('mailto:') ||
+                href.startsWith('tel:') ||
+                href.startsWith('data:')) {
+              return;
+            }
+
+            // 跳过已经包含 locale 前缀的链接
+            if (href.startsWith(localePrefix + '/') || href === localePrefix) {
+              return;
+            }
+
+            // 对于以 baseUrl 开头但没有 locale 的链接，添加 locale
+            if (baseUrl && href.startsWith(baseUrl + '/')) {
+              const pathAfterBase = href.slice(baseUrl.length);
+              // 检查是否已经有 locale 前缀
+              if (!pathAfterBase.startsWith('/' + localePart + '/') && pathAfterBase !== '/' + localePart) {
+                link.setAttribute('href', baseUrl + '/' + localePart + pathAfterBase);
+              }
+              return;
+            }
+
+            // 对于绝对路径链接 (以 / 开头)，添加 locale prefix
+            if (href.startsWith('/')) {
+              // 检查是否已经有 locale 前缀
+              if (!href.startsWith('/' + localePart + '/') && href !== '/' + localePart) {
+                link.setAttribute('href', localePrefix + href);
+              }
+            }
+          });
+        }
+
+        // 页面加载后执行
+        if (document.readyState === 'loading') {
+          document.addEventListener('DOMContentLoaded', fixProseLinks);
+        } else {
+          fixProseLinks();
+        }
+
+        // 支持 Astro 视图过渡
+        document.addEventListener('astro:page-load', fixProseLinks);
+      })();
+    </script>
 
     <!-- 文章底部 -->
     <footer class="not-prose mt-16 pt-8 border-t border-slate-200 dark:border-slate-700">
