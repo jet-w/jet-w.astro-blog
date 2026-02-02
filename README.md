@@ -2,7 +2,7 @@
 
 A modern, feature-rich Astro blog theme with Vue and Tailwind CSS support. Provides a complete blogging solution with multi-language support, rich markdown capabilities, and interactive components.
 
-**Official Website**: [https://jet-w.github.io/jet-w.astro-blog/](https://jet-w.github.io/jet-w.astro-blog/)
+**Official Website**: [https://jetw-astroblog.github.io/](https://jetw-astroblog.github.io/)
 
 ## Features
 
@@ -262,6 +262,6 @@ Haiyue
 
 ## Links
 
-- [Official Website](https://jet-w.github.io/jet-w.astro-blog/)
-- [GitHub Repository](https://github.com/jet-w/jet-w.astro-blog)
+- [Official Website](https://jetw-astroblog.github.io/)
+- [GitHub Repository](https://github.com/jetw-astroblog/jet-w.astro-blog)
 - [NPM Package](https://www.npmjs.com/package/@jet-w/astro-blog)
