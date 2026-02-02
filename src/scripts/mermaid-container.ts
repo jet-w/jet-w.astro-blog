@@ -1,10 +1,37 @@
-// 简化的 Mermaid 容器渲染脚本
-console.log('🎯 Mermaid Container Script loaded');
+/**
+ * Mermaid Container Renderer
+ * Handles Mermaid diagram rendering with fullscreen preview support
+ */
 
-// UTF-8 安全的 base64 解码函数
-function base64ToUtf8(base64) {
+// Extend Window interface for mermaid
+declare global {
+  interface Window {
+    mermaid: {
+      initialize: (config: MermaidConfig) => void;
+      render: (id: string, code: string) => Promise<{ svg: string }>;
+    };
+  }
+}
+
+interface MermaidConfig {
+  startOnLoad: boolean;
+  theme: string;
+  securityLevel: string;
+  fontFamily: string;
+  flowchart?: {
+    useMaxWidth: boolean;
+    htmlLabels: boolean;
+    curve: string;
+  };
+}
+
+interface FullscreenModal extends HTMLElement {
+  _fitToScreen?: () => void;
+}
+
+// UTF-8 safe base64 decode function
+function base64ToUtf8(base64: string): string {
   try {
-    // 使用 TextDecoder 处理 UTF-8 字符
     const binaryString = atob(base64);
     const bytes = new Uint8Array(binaryString.length);
     for (let i = 0; i < binaryString.length; i++) {
@@ -13,20 +40,19 @@ function base64ToUtf8(base64) {
     const decoder = new TextDecoder('utf-8');
     return decoder.decode(bytes);
   } catch (error) {
-    console.error('Base64 解码失败:', error);
-    // 回退到原始方法
+    console.error('Base64 decode failed:', error);
     return atob(base64);
   }
 }
 
-// 创建全屏预览模态框
-function createFullscreenModal() {
-  // 如果已存在则返回
-  if (document.getElementById('mermaid-fullscreen-modal')) {
-    return document.getElementById('mermaid-fullscreen-modal');
+// Create fullscreen preview modal
+function createFullscreenModal(): FullscreenModal {
+  const existingModal = document.getElementById('mermaid-fullscreen-modal') as FullscreenModal;
+  if (existingModal) {
+    return existingModal;
   }
 
-  const modal = document.createElement('div');
+  const modal = document.createElement('div') as FullscreenModal;
   modal.id = 'mermaid-fullscreen-modal';
   modal.className = 'mermaid-fullscreen-modal';
   modal.innerHTML = `
@@ -79,36 +105,35 @@ function createFullscreenModal() {
 
   document.body.appendChild(modal);
 
-  // 绑定事件
+  // Zoom and drag state
   let currentZoom = 1;
   const zoomStep = 0.25;
   const minZoom = 0.25;
   const maxZoom = 4;
 
-  // 拖动相关状态
   let isDragging = false;
   let startX = 0;
   let startY = 0;
   let translateX = 0;
   let translateY = 0;
 
-  const backdrop = modal.querySelector('.mermaid-fullscreen-backdrop');
-  const closeBtn = modal.querySelector('.mermaid-close-btn');
-  const zoomLevelSpan = modal.querySelector('.mermaid-zoom-level');
-  const svgWrapper = modal.querySelector('.mermaid-fullscreen-svg-wrapper');
-  const contentArea = modal.querySelector('.mermaid-fullscreen-content');
+  const backdrop = modal.querySelector('.mermaid-fullscreen-backdrop') as HTMLElement;
+  const closeBtn = modal.querySelector('.mermaid-close-btn') as HTMLElement;
+  const zoomLevelSpan = modal.querySelector('.mermaid-zoom-level') as HTMLElement;
+  const svgWrapper = modal.querySelector('.mermaid-fullscreen-svg-wrapper') as HTMLElement;
+  const contentArea = modal.querySelector('.mermaid-fullscreen-content') as HTMLElement;
 
-  function updateTransform() {
+  function updateTransform(): void {
     zoomLevelSpan.textContent = Math.round(currentZoom * 100) + '%';
     svgWrapper.style.transform = `translate(${translateX}px, ${translateY}px) scale(${currentZoom})`;
   }
 
-  function resetPosition() {
+  function resetPosition(): void {
     translateX = 0;
     translateY = 0;
   }
 
-  function closeModal() {
+  function closeModal(): void {
     modal.classList.remove('active');
     document.body.style.overflow = '';
     currentZoom = 1;
@@ -120,9 +145,9 @@ function createFullscreenModal() {
   backdrop.addEventListener('click', closeModal);
   closeBtn.addEventListener('click', closeModal);
 
-  // 鼠标拖动事件
-  svgWrapper.addEventListener('mousedown', (e) => {
-    if (e.button !== 0) return; // 只响应左键
+  // Mouse drag events
+  svgWrapper.addEventListener('mousedown', (e: MouseEvent) => {
+    if (e.button !== 0) return;
     isDragging = true;
     startX = e.clientX - translateX;
     startY = e.clientY - translateY;
@@ -130,7 +155,7 @@ function createFullscreenModal() {
     e.preventDefault();
   });
 
-  document.addEventListener('mousemove', (e) => {
+  document.addEventListener('mousemove', (e: MouseEvent) => {
     if (!isDragging || !modal.classList.contains('active')) return;
     translateX = e.clientX - startX;
     translateY = e.clientY - startY;
@@ -144,11 +169,11 @@ function createFullscreenModal() {
     }
   });
 
-  // 触摸拖动支持（移动设备）
+  // Touch drag support
   let touchStartX = 0;
   let touchStartY = 0;
 
-  svgWrapper.addEventListener('touchstart', (e) => {
+  svgWrapper.addEventListener('touchstart', (e: TouchEvent) => {
     if (e.touches.length === 1) {
       isDragging = true;
       touchStartX = e.touches[0].clientX - translateX;
@@ -156,7 +181,7 @@ function createFullscreenModal() {
     }
   }, { passive: true });
 
-  svgWrapper.addEventListener('touchmove', (e) => {
+  svgWrapper.addEventListener('touchmove', (e: TouchEvent) => {
     if (!isDragging || e.touches.length !== 1) return;
     translateX = e.touches[0].clientX - touchStartX;
     translateY = e.touches[0].clientY - touchStartY;
@@ -167,19 +192,17 @@ function createFullscreenModal() {
     isDragging = false;
   });
 
-  // 计算适配屏幕的缩放比例
-  function calculateFitScale() {
+  // Calculate fit-to-screen scale
+  function calculateFitScale(): number {
     const svg = svgWrapper.querySelector('svg');
     if (!svg) return 1;
 
-    // 先重置变换以获取原始尺寸
     const originalTransform = svgWrapper.style.transform;
     svgWrapper.style.transform = 'translate(0px, 0px) scale(1)';
 
     const svgRect = svg.getBoundingClientRect();
     const contentRect = contentArea.getBoundingClientRect();
 
-    // 恢复变换
     svgWrapper.style.transform = originalTransform;
 
     const availableWidth = contentRect.width - 80;
@@ -187,12 +210,13 @@ function createFullscreenModal() {
 
     const scaleX = availableWidth / svgRect.width;
     const scaleY = availableHeight / svgRect.height;
-    return Math.min(scaleX, scaleY, 3); // 最大不超过 300%
+    return Math.min(scaleX, scaleY, 3);
   }
 
-  modal.querySelectorAll('.mermaid-zoom-btn').forEach(btn => {
-    btn.addEventListener('click', (e) => {
-      const action = btn.dataset.action;
+  // Zoom button handlers
+  modal.querySelectorAll('.mermaid-zoom-btn').forEach((btn) => {
+    btn.addEventListener('click', () => {
+      const action = (btn as HTMLElement).dataset.action;
       if (action === 'zoom-in' && currentZoom < maxZoom) {
         currentZoom = Math.min(currentZoom + zoomStep, maxZoom);
       } else if (action === 'zoom-out' && currentZoom > minZoom) {
@@ -208,8 +232,8 @@ function createFullscreenModal() {
     });
   });
 
-  // 键盘事件
-  document.addEventListener('keydown', (e) => {
+  // Keyboard events
+  document.addEventListener('keydown', (e: KeyboardEvent) => {
     if (!modal.classList.contains('active')) return;
 
     if (e.key === 'Escape') {
@@ -231,8 +255,8 @@ function createFullscreenModal() {
     }
   });
 
-  // 鼠标滚轮缩放
-  modal.querySelector('.mermaid-fullscreen-content').addEventListener('wheel', (e) => {
+  // Mouse wheel zoom
+  contentArea.addEventListener('wheel', (e: WheelEvent) => {
     if (!modal.classList.contains('active')) return;
     e.preventDefault();
 
@@ -244,8 +268,8 @@ function createFullscreenModal() {
     updateTransform();
   }, { passive: false });
 
-  // 暴露适配屏幕的方法供外部调用
-  modal._fitToScreen = function() {
+  // Expose fit-to-screen method
+  modal._fitToScreen = function(): void {
     currentZoom = calculateFitScale();
     resetPosition();
     updateTransform();
@@ -254,10 +278,10 @@ function createFullscreenModal() {
   return modal;
 }
 
-// 打开全屏预览
-function openFullscreen(svgContent) {
+// Open fullscreen preview
+function openFullscreen(svgContent: string): void {
   const modal = createFullscreenModal();
-  const svgWrapper = modal.querySelector('.mermaid-fullscreen-svg-wrapper');
+  const svgWrapper = modal.querySelector('.mermaid-fullscreen-svg-wrapper') as HTMLElement;
 
   svgWrapper.innerHTML = svgContent;
   svgWrapper.style.transform = 'translate(0px, 0px) scale(1)';
@@ -266,7 +290,6 @@ function openFullscreen(svgContent) {
   modal.classList.add('active');
   document.body.style.overflow = 'hidden';
 
-  // 等待 DOM 渲染完成后自动适配屏幕
   requestAnimationFrame(() => {
     if (modal._fitToScreen) {
       modal._fitToScreen();
@@ -274,8 +297,8 @@ function openFullscreen(svgContent) {
   });
 }
 
-// 创建全屏按钮
-function createFullscreenButton() {
+// Create fullscreen button
+function createFullscreenButton(): HTMLButtonElement {
   const btn = document.createElement('button');
   btn.className = 'mermaid-fullscreen-btn';
   btn.title = '全屏预览';
@@ -287,25 +310,36 @@ function createFullscreenButton() {
   return btn;
 }
 
-function renderMermaidContainers() {
-  console.log('🚀 开始检查 mermaid 容器');
+// Load mermaid from CDN
+function loadMermaidFromCDN(): Promise<void> {
+  return new Promise((resolve, reject) => {
+    // Check if already loaded
+    if (window.mermaid) {
+      resolve();
+      return;
+    }
 
-  // 查找所有新格式的mermaid容器
+    const script = document.createElement('script');
+    script.src = 'https://cdn.jsdelivr.net/npm/mermaid@10/dist/mermaid.min.js';
+    script.onload = () => resolve();
+    script.onerror = () => reject(new Error('Failed to load mermaid from CDN'));
+    document.head.appendChild(script);
+  });
+}
+
+// Render all Mermaid containers
+async function renderMermaidContainers(): Promise<void> {
   const mermaidContainers = document.querySelectorAll('.mermaid-container[data-mermaid-source]');
-  console.log('🔍 找到 ' + mermaidContainers.length + ' 个mermaid容器');
 
   if (mermaidContainers.length === 0) {
-    console.log('❌ 没有找到mermaid容器');
     return;
   }
 
-  // 动态加载mermaid库
-  const script = document.createElement('script');
-  script.src = 'https://cdn.jsdelivr.net/npm/mermaid@10/dist/mermaid.min.js';
-  script.onload = function() {
-    console.log('✅ Mermaid库加载完成');
+  try {
+    // Load mermaid from CDN
+    await loadMermaidFromCDN();
 
-    // 初始化mermaid，支持中文字符
+    // Initialize mermaid with Chinese font support
     window.mermaid.initialize({
       startOnLoad: false,
       theme: 'default',
@@ -318,22 +352,21 @@ function renderMermaidContainers() {
       }
     });
 
-    // 处理每个容器
-    mermaidContainers.forEach(async function(container, index) {
+    // Process each container
+    for (let index = 0; index < mermaidContainers.length; index++) {
+      const container = mermaidContainers[index] as HTMLElement;
+
       try {
         const base64Code = container.getAttribute('data-mermaid-source');
-        const id = container.getAttribute('data-id') || ('mermaid-' + index);
+        if (!base64Code) continue;
 
-        console.log('🎨 处理第' + (index+1) + '个容器, ID: ' + id);
-
-        // UTF-8 安全的 base64 解码
+        const id = container.getAttribute('data-id') || `mermaid-${Date.now()}-${index}`;
         const mermaidCode = base64ToUtf8(base64Code);
-        console.log('📝 Mermaid代码: ' + mermaidCode.slice(0, 50) + '...');
 
-        // 渲染mermaid图表
+        // Render mermaid diagram
         const result = await window.mermaid.render(id, mermaidCode);
 
-        // 创建渲染后的容器
+        // Create rendered container
         const renderedDiv = document.createElement('div');
         renderedDiv.className = 'mermaid-rendered';
         renderedDiv.style.cssText = [
@@ -348,14 +381,14 @@ function renderMermaidContainers() {
         ].join('; ');
         renderedDiv.innerHTML = result.svg;
 
-        // 添加全屏按钮
+        // Add fullscreen button
         const fullscreenBtn = createFullscreenButton();
         fullscreenBtn.addEventListener('click', () => {
           openFullscreen(result.svg);
         });
         renderedDiv.appendChild(fullscreenBtn);
 
-        // 替换加载提示
+        // Replace loading placeholder
         const loadingDiv = container.querySelector('.mermaid-loading');
         if (loadingDiv) {
           container.replaceChild(renderedDiv, loadingDiv);
@@ -363,40 +396,35 @@ function renderMermaidContainers() {
           container.appendChild(renderedDiv);
         }
 
-        console.log('✨ 第' + (index+1) + '个图表渲染成功');
-
       } catch (error) {
-        console.error('❌ 渲染第' + (index+1) + '个图表失败:', error);
+        console.error(`Mermaid render error for container ${index + 1}:`, error);
 
-        // 显示错误信息
+        // Show error message
         const errorDiv = document.createElement('div');
         errorDiv.style.cssText = 'color: red; padding: 1rem; border: 1px solid red; margin: 1rem 0; background: #fee;';
-        errorDiv.innerHTML = '<strong>Mermaid渲染错误:</strong> ' + error.message;
+        errorDiv.innerHTML = `<strong>Mermaid渲染错误:</strong> ${(error as Error).message}`;
 
         const loadingDiv = container.querySelector('.mermaid-loading');
         if (loadingDiv) {
           container.replaceChild(errorDiv, loadingDiv);
         }
 
-        // 显示fallback代码块
-        const fallback = container.querySelector('.mermaid-fallback');
+        // Show fallback code block
+        const fallback = container.querySelector('.mermaid-fallback') as HTMLElement;
         if (fallback) {
           fallback.style.display = 'block';
         }
       }
-    });
-  };
-
-  script.onerror = function() {
-    console.error('❌ Mermaid库加载失败');
-  };
-
-  document.head.appendChild(script);
+    }
+  } catch (error) {
+    console.error('Failed to load mermaid library:', error);
+  }
 }
 
-// 启动渲染
-if (document.readyState === 'loading') {
-  document.addEventListener('DOMContentLoaded', renderMermaidContainers);
-} else {
+/**
+ * Initialize Mermaid renderer
+ * Call this function on page load and Astro page transitions
+ */
+export function initMermaidRenderer(): void {
   renderMermaidContainers();
 }

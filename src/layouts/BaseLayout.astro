@@ -168,11 +168,28 @@ const faviconType = faviconSvgExists ? 'image/svg+xml' : faviconIcoExists ? 'ima
       <slot />
     </div>
 
-    <!-- Mermaid -->
-    <script src={withBase('/js/mermaid-container.js', base)} is:inline></script>
+    <!-- Mermaid and Tabs initialization -->
+    <script>
+      import { initMermaidRenderer } from '../scripts/mermaid-container';
+      import { initTabs } from '../scripts/tabs-init';
 
-    <!-- Tabs -->
-    <script src={withBase('/js/tabs-init.js', base)} is:inline></script>
+      // Initialize on page load
+      if (document.readyState === 'loading') {
+        document.addEventListener('DOMContentLoaded', () => {
+          initMermaidRenderer();
+          initTabs();
+        });
+      } else {
+        initMermaidRenderer();
+        initTabs();
+      }
+
+      // Support Astro page transitions
+      document.addEventListener('astro:page-load', () => {
+        initMermaidRenderer();
+        initTabs();
+      });
+    </script>
 
     <!-- Store i18n data for client-side scripts -->
     <script is:inline define:vars={{ locale: currentLocale, uiTranslations: ui }}>

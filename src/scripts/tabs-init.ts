@@ -1,10 +1,21 @@
 /**
- * Tabs component initialization script
- * Handles tab switching functionality
+ * Tabs Component Initialization
+ * Handles tab switching and keyboard navigation
  */
 
-// Global function for tab switching (called from onclick handlers)
-window.switchTab = function(tabsId, tabIndex) {
+// Extend Window interface for global switchTab function
+declare global {
+  interface Window {
+    switchTab: (tabsId: string, tabIndex: number) => void;
+  }
+}
+
+/**
+ * Switch to a specific tab
+ * @param tabsId - The data-tabs-id of the tabs container
+ * @param tabIndex - The index of the tab to switch to
+ */
+function switchTab(tabsId: string, tabIndex: number): void {
   const tabsContainer = document.querySelector(`[data-tabs-id="${tabsId}"]`);
   if (!tabsContainer) return;
 
@@ -27,19 +38,12 @@ window.switchTab = function(tabsId, tabIndex) {
       panel.classList.remove('active');
     }
   });
-};
+}
 
-// Initialize all tabs on page load
-document.addEventListener('DOMContentLoaded', function() {
-  initializeTabs();
-});
-
-// Re-initialize on Astro page navigation (for view transitions)
-document.addEventListener('astro:page-load', function() {
-  initializeTabs();
-});
-
-function initializeTabs() {
+/**
+ * Initialize all tabs containers on the page
+ */
+function initializeTabs(): void {
   const tabContainers = document.querySelectorAll('.custom-tabs');
 
   tabContainers.forEach((container) => {
@@ -58,29 +62,42 @@ function initializeTabs() {
     // Add keyboard navigation
     const buttons = container.querySelectorAll('.tab-button');
     buttons.forEach((button, index) => {
-      button.addEventListener('keydown', (e) => {
+      button.addEventListener('keydown', (e: Event) => {
+        const keyEvent = e as KeyboardEvent;
         let newIndex = index;
 
-        if (e.key === 'ArrowRight' || e.key === 'ArrowDown') {
-          e.preventDefault();
+        if (keyEvent.key === 'ArrowRight' || keyEvent.key === 'ArrowDown') {
+          keyEvent.preventDefault();
           newIndex = (index + 1) % buttons.length;
-        } else if (e.key === 'ArrowLeft' || e.key === 'ArrowUp') {
-          e.preventDefault();
+        } else if (keyEvent.key === 'ArrowLeft' || keyEvent.key === 'ArrowUp') {
+          keyEvent.preventDefault();
           newIndex = (index - 1 + buttons.length) % buttons.length;
-        } else if (e.key === 'Home') {
-          e.preventDefault();
+        } else if (keyEvent.key === 'Home') {
+          keyEvent.preventDefault();
           newIndex = 0;
-        } else if (e.key === 'End') {
-          e.preventDefault();
+        } else if (keyEvent.key === 'End') {
+          keyEvent.preventDefault();
           newIndex = buttons.length - 1;
         }
 
         if (newIndex !== index) {
           const tabsId = container.getAttribute('data-tabs-id');
-          window.switchTab(tabsId, newIndex);
-          buttons[newIndex].focus();
+          if (tabsId) {
+            switchTab(tabsId, newIndex);
+            (buttons[newIndex] as HTMLElement).focus();
+          }
         }
       });
     });
   });
+}
+
+/**
+ * Initialize Tabs functionality
+ * Call this function on page load and Astro page transitions
+ */
+export function initTabs(): void {
+  // Expose switchTab globally for onclick handlers
+  window.switchTab = switchTab;
+  initializeTabs();
 }

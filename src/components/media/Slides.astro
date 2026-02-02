@@ -22,6 +22,9 @@
  * </Slides>
  */
 
+// Note: CSS is loaded via <link> tags in inline mode (lines 143-146)
+// This ensures proper load order: reveal.css -> theme -> monokai
+
 interface Props {
   /** 幻灯片 URL（使用 iframe 嵌入模式） */
   src?: string;
@@ -78,9 +81,6 @@ const revealConfig = JSON.stringify({
   touch: true,
 });
 
-// Get base URL for static assets
-const base = import.meta.env.BASE_URL;
-
 // 获取 slot 内容
 const slotContent = await Astro.slots.render('default');
 const hasInlineContent = slotContent && slotContent.trim().length > 0;
@@ -136,7 +136,14 @@ const slidesData = hasInlineContent ? parseSlides(slotContent) : [];
   <div
     class="slides-inline-container"
     style={height ? `height: ${height};` : `aspect-ratio: ${aspectRatio};`}
+    data-slides-id={slidesId}
+    data-reveal-config={revealConfig}
   >
+    <!-- Reveal.js CSS - order matters! -->
+    <link rel="stylesheet" href="https://unpkg.com/reveal.js@5.2.1/dist/reveal.css" />
+    <link rel="stylesheet" href={`https://unpkg.com/reveal.js@5.2.1/dist/theme/${theme}.css`} />
+    <link rel="stylesheet" href="https://unpkg.com/reveal.js@5.2.1/plugin/highlight/monokai.css" />
+
     <div class="reveal" id={slidesId}>
       <div class="slides">
         {slidesData.map((verticalSlides) => (
@@ -166,37 +173,24 @@ const slidesData = hasInlineContent ? parseSlides(slotContent) : [];
     </button>
   </div>
 
-  <!-- Reveal.js 资源 -->
-  <link rel="stylesheet" href={`${base}slides/reveal.css`} />
-  <link rel="stylesheet" href={`${base}slides/theme/${theme}.css`} />
-  <link rel="stylesheet" href={`${base}slides/plugin/highlight/monokai.css`} />
+  <!-- Initialize Reveal.js using ES modules -->
+  <script>
+    import Reveal from 'reveal.js';
+    import Markdown from 'reveal.js/plugin/markdown/markdown.esm.js';
+    import Highlight from 'reveal.js/plugin/highlight/highlight.esm.js';
 
-  <!-- Reveal.js - dynamically loaded with base URL -->
-  <script is:inline define:vars={{ baseUrl: base }}>
-    (function() {
-      var scripts = [
-        baseUrl + 'slides/reveal.js',
-        baseUrl + 'slides/plugin/markdown/markdown.js',
-        baseUrl + 'slides/plugin/highlight/highlight.js'
-      ];
-      scripts.forEach(function(src) {
-        var script = document.createElement('script');
-        script.src = src;
-        script.async = false;
-        document.head.appendChild(script);
-      });
-    })();
-  </script>
+    function initInlineSlides() {
+      document.querySelectorAll('.slides-inline-container[data-slides-id]').forEach((container) => {
+        const slidesId = container.getAttribute('data-slides-id');
+        const configStr = container.getAttribute('data-reveal-config');
+        if (!slidesId || !configStr) return;
 
-  <script is:inline define:vars={{ slidesId, revealConfig }}>
-    (function() {
-      function initSlides() {
         const element = document.getElementById(slidesId);
         if (!element || element.dataset.initialized) return;
 
-        const config = JSON.parse(revealConfig);
+        const config = JSON.parse(configStr);
 
-        // 使用 Reveal 构造函数创建独立实例
+        // Create independent Reveal instance
         const deck = new Reveal(element, {
           hash: config.hash,
           controls: config.controls,
@@ -208,20 +202,23 @@ const slidesData = hasInlineContent ? parseSlides(slotContent) : [];
           keyboard: config.keyboard,
           overview: config.overview,
           touch: config.touch,
-          plugins: [RevealMarkdown, RevealHighlight]
+          plugins: [Markdown, Highlight]
         });
 
         deck.initialize();
         element.dataset.initialized = 'true';
-      }
+      });
+    }
 
-      if (document.readyState === 'loading') {
-        document.addEventListener('DOMContentLoaded', initSlides);
-      } else {
-        // 延迟初始化确保 Reveal.js 已加载
-        setTimeout(initSlides, 100);
-      }
-    })();
+    // Initialize when DOM is ready
+    if (document.readyState === 'loading') {
+      document.addEventListener('DOMContentLoaded', initInlineSlides);
+    } else {
+      initInlineSlides();
+    }
+
+    // Re-initialize on Astro page transitions
+    document.addEventListener('astro:page-load', initInlineSlides);
   </script>
 ) : (
   <!-- 无内容提示 -->

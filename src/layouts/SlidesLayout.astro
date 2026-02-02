@@ -1,9 +1,18 @@
 ---
 import { siteConfig } from '@jet-w/astro-blog/config';
-import '@jet-w/astro-blog/styles/slides.css';
 import type { I18nConfig } from '../config/i18n';
 import { defaultI18nConfig } from '../config/i18n';
 import { getLocaleFromPath, getLocaleConfig, removeBase } from '../utils/i18n';
+
+// Custom slides styles - bundled by Astro (loaded after CDN CSS)
+import '@jet-w/astro-blog/styles/slides.css';
+
+// CSS loading order (via <link> tags in <head>):
+// 1. reveal.css (core) - CDN
+// 2. theme CSS - CDN (dynamic based on frontmatter)
+// 3. monokai.css (code highlighting) - CDN
+// 4. KaTeX CSS - CDN
+// 5. slides.css (custom) - bundled by Astro (last)
 
 export interface Props {
   title: string;
@@ -48,7 +57,7 @@ const localeSiteConfig = localeConfig.site;
 const siteTitle = localeSiteConfig.title || siteConfig.title;
 const fullTitle = `${title} | ${siteTitle}`;
 
-// Reveal.js 配置
+// Reveal.js configuration for client-side
 const revealConfig = JSON.stringify({
   hash,
   controls,
@@ -56,12 +65,9 @@ const revealConfig = JSON.stringify({
   center,
   transition,
   slideNumber,
-  // Markdown 配置
   markdown: {
     smartypants: true,
   },
-  // 插件配置
-  plugins: ['RevealMarkdown', 'RevealHighlight', 'RevealNotes', 'RevealMath'],
 });
 ---
 
@@ -80,17 +86,18 @@ const revealConfig = JSON.stringify({
     <meta property="og:title" content={fullTitle} />
     <meta property="og:description" content={description} />
 
-    <!-- Reveal.js CSS -->
-    <link rel="stylesheet" href={`${base}slides/reveal.css`} />
-    <link rel="stylesheet" href={`${base}slides/theme/${theme}.css`} id="theme" />
-
-    <!-- Reveal.js 代码高亮主题 -->
-    <link rel="stylesheet" href={`${base}slides/plugin/highlight/monokai.css`} />
+    <!-- Reveal.js CSS - order matters! -->
+    <!-- 1. Core reveal.css (base styles) -->
+    <link rel="stylesheet" href="https://unpkg.com/reveal.js@5.2.1/dist/reveal.css" />
+    <!-- 2. Theme CSS (overrides core colors/fonts) -->
+    <link rel="stylesheet" href={`https://unpkg.com/reveal.js@5.2.1/dist/theme/${theme}.css`} id="theme" />
+    <!-- 3. Code highlighting theme -->
+    <link rel="stylesheet" href="https://unpkg.com/reveal.js@5.2.1/plugin/highlight/monokai.css" />
 
     <!-- KaTeX for math -->
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.css" />
 
-    <!-- Mermaid 和 ECharts 在幻灯片中的样式 -->
+    <!-- Mermaid and ECharts styles for slides -->
     <style>
       .reveal .mermaid {
         background: rgba(255, 255, 255, 0.95);
@@ -108,65 +115,19 @@ const revealConfig = JSON.stringify({
       }
     </style>
   </head>
-  <body>
+  <body data-reveal-config={revealConfig} data-base-url={base}>
     <div class="reveal">
       <div class="slides">
         <slot />
       </div>
     </div>
 
-    <!-- 返回按钮（仅在独立页面显示，嵌入模式通过 JS 隐藏） -->
+    <!-- Back button (hidden in embed mode via JS) -->
     <a href="#" class="slides-back-btn" id="slides-back-btn" title="返回上一级">
       <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
         <path d="M19 12H5M12 19l-7-7 7-7"/>
       </svg>
     </a>
-
-    <!-- 检测嵌入模式并隐藏返回按钮，设置返回链接为父路径 -->
-    <script is:inline define:vars={{ baseUrl: base }}>
-      (function() {
-        var btn = document.getElementById('slides-back-btn');
-        if (!btn) return;
-
-        // 检查是否在 iframe 中或 URL 包含 embed=true
-        var isEmbed = window.self !== window.top ||
-                      window.location.search.indexOf('embed=true') !== -1;
-        if (isEmbed) {
-          btn.style.display = 'none';
-          return;
-        }
-
-        // 设置返回链接为父路径
-        var path = window.location.pathname;
-        // 移除末尾的斜杠
-        if (path.endsWith('/')) {
-          path = path.slice(0, -1);
-        }
-        // 获取父路径
-        var parentPath = path.substring(0, path.lastIndexOf('/'));
-        // 如果父路径为空，返回base URL
-        btn.href = parentPath || baseUrl;
-      })();
-    </script>
-
-    <!-- Reveal.js - dynamically loaded with base URL -->
-    <script is:inline define:vars={{ baseUrl: base }}>
-      (function() {
-        var scripts = [
-          baseUrl + 'slides/reveal.js',
-          baseUrl + 'slides/plugin/markdown/markdown.js',
-          baseUrl + 'slides/plugin/highlight/highlight.js',
-          baseUrl + 'slides/plugin/notes/notes.js',
-          baseUrl + 'slides/plugin/math/math.js'
-        ];
-        scripts.forEach(function(src) {
-          var script = document.createElement('script');
-          script.src = src;
-          script.async = false;
-          document.head.appendChild(script);
-        });
-      })();
-    </script>
 
     <!-- Mermaid -->
     <script is:inline src="https://cdn.jsdelivr.net/npm/mermaid@10/dist/mermaid.min.js"></script>
@@ -174,176 +135,202 @@ const revealConfig = JSON.stringify({
     <!-- ECharts -->
     <script is:inline src="https://cdn.jsdelivr.net/npm/echarts@5/dist/echarts.min.js"></script>
 
-    <!-- 初始化 Reveal.js -->
-    <script is:inline define:vars={{ revealConfig }}>
-      document.addEventListener('DOMContentLoaded', function() {
-        const config = JSON.parse(revealConfig);
+    <!-- Initialize Reveal.js using ES modules -->
+    <script>
+      import Reveal from 'reveal.js';
+      import Markdown from 'reveal.js/plugin/markdown/markdown.esm.js';
+      import Highlight from 'reveal.js/plugin/highlight/highlight.esm.js';
+      import Notes from 'reveal.js/plugin/notes/notes.esm.js';
+      import RevealMath from 'reveal.js/plugin/math/math.esm.js';
 
-        Reveal.initialize({
-          hash: config.hash,
-          controls: config.controls,
-          progress: config.progress,
-          center: config.center,
-          transition: config.transition,
-          slideNumber: config.slideNumber,
+      // Get configuration from data attributes
+      const body = document.body;
+      const config = JSON.parse(body.dataset.revealConfig || '{}');
+      const baseUrl = body.dataset.baseUrl || '/';
 
-          // Markdown 配置
-          markdown: config.markdown,
+      // Handle back button
+      const backBtn = document.getElementById('slides-back-btn');
+      if (backBtn) {
+        // Check if embedded in iframe or URL contains embed=true
+        const isEmbed = window.self !== window.top ||
+                        window.location.search.indexOf('embed=true') !== -1;
+        if (isEmbed) {
+          backBtn.style.display = 'none';
+        } else {
+          // Set back link to parent path
+          let path = window.location.pathname;
+          if (path.endsWith('/')) {
+            path = path.slice(0, -1);
+          }
+          const parentPath = path.substring(0, path.lastIndexOf('/'));
+          backBtn.href = parentPath || baseUrl;
+        }
+      }
 
-          // 数学公式配置
-          math: {
-            mathjax: null,
-            katex: 'https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.js',
-            katexScript: 'https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/contrib/auto-render.min.js',
-          },
+      // Initialize Reveal.js
+      const deck = new Reveal({
+        hash: config.hash,
+        controls: config.controls,
+        progress: config.progress,
+        center: config.center,
+        transition: config.transition,
+        slideNumber: config.slideNumber,
+        markdown: config.markdown,
+        math: {
+          mathjax: null,
+          katex: 'https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.js',
+          katexScript: 'https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/contrib/auto-render.min.js',
+        },
+        plugins: [Markdown, Highlight, Notes, RevealMath.KaTeX]
+      });
 
-          // 插件
-          plugins: [RevealMarkdown, RevealHighlight, RevealNotes, RevealMath.KaTeX]
-        }).then(function() {
-          // Reveal.js 初始化完成后，渲染 Mermaid 和 ECharts
-          var mermaidContainers = [];
-          var echartsInstances = [];
+      deck.initialize().then(() => {
+        // Mermaid and ECharts containers
+        const mermaidContainers: Array<{container: HTMLElement, code: string, rendered: boolean}> = [];
+        const echartsInstances: Array<{container: HTMLElement, option: object, chart: any, initialized: boolean}> = [];
 
-          // 初始化 Mermaid
-          if (typeof mermaid !== 'undefined') {
-            mermaid.initialize({
-              startOnLoad: false,
-              theme: 'default',
-              securityLevel: 'loose'
-            });
+        // Initialize Mermaid
+        if (typeof (window as any).mermaid !== 'undefined') {
+          const mermaid = (window as any).mermaid;
+          mermaid.initialize({
+            startOnLoad: false,
+            theme: 'default',
+            securityLevel: 'loose'
+          });
 
-            // 查找所有 mermaid 代码块并准备容器
-            document.querySelectorAll('pre code.language-mermaid, pre code.mermaid').forEach(function(block, index) {
-              var code = block.textContent;
-              var container = document.createElement('div');
-              container.className = 'mermaid';
-              container.id = 'mermaid-slide-' + index;
-              container.setAttribute('data-mermaid-code', code);
-              container.style.minHeight = '100px';
+          // Find all mermaid code blocks and prepare containers
+          document.querySelectorAll('pre code.language-mermaid, pre code.mermaid').forEach((block, index) => {
+            const code = block.textContent || '';
+            const container = document.createElement('div');
+            container.className = 'mermaid';
+            container.id = 'mermaid-slide-' + index;
+            container.setAttribute('data-mermaid-code', code);
+            container.style.minHeight = '100px';
 
-              // 替换代码块
-              var pre = block.parentElement;
+            // Replace code block
+            const pre = block.parentElement;
+            if (pre && pre.parentElement) {
               pre.parentElement.insertBefore(container, pre);
               pre.style.display = 'none';
-
-              mermaidContainers.push({
-                container: container,
-                code: code,
-                rendered: false
-              });
-            });
-
-            // 渲染当前可见幻灯片中的 Mermaid
-            async function renderVisibleMermaid() {
-              var needsLayout = false;
-
-              mermaidContainers.forEach(function(item) {
-                if (item.rendered) return;
-
-                var section = item.container.closest('section');
-                if (section && (section.classList.contains('present') || section.closest('.present'))) {
-                  item.container.textContent = item.code;
-                  item.rendered = true;
-                  needsLayout = true;
-                }
-              });
-
-              // 渲染所有已标记的 Mermaid
-              var toRender = mermaidContainers.filter(function(item) {
-                return item.rendered && item.container.textContent;
-              }).map(function(item) {
-                return item.container;
-              });
-
-              if (toRender.length > 0) {
-                try {
-                  await mermaid.run({ nodes: toRender });
-                  // Mermaid 渲染完成后，通知 Reveal.js 重新计算布局
-                  if (needsLayout) {
-                    Reveal.layout();
-                  }
-                } catch(e) {
-                  console.warn('Mermaid render warning:', e);
-                }
-              }
             }
 
-            // 初始渲染 - 使用更长的延迟确保 Reveal.js 完全初始化
-            setTimeout(renderVisibleMermaid, 200);
-
-            // 幻灯片切换时渲染
-            Reveal.on('slidechanged', function() {
-              setTimeout(renderVisibleMermaid, 50);
+            mermaidContainers.push({
+              container: container,
+              code: code,
+              rendered: false
             });
+          });
+
+          // Render visible Mermaid diagrams
+          async function renderVisibleMermaid() {
+            let needsLayout = false;
+
+            mermaidContainers.forEach((item) => {
+              if (item.rendered) return;
+
+              const section = item.container.closest('section');
+              if (section && (section.classList.contains('present') || section.closest('.present'))) {
+                item.container.textContent = item.code;
+                item.rendered = true;
+                needsLayout = true;
+              }
+            });
+
+            // Render all marked Mermaid diagrams
+            const toRender = mermaidContainers.filter((item) => {
+              return item.rendered && item.container.textContent;
+            }).map((item) => item.container);
+
+            if (toRender.length > 0) {
+              try {
+                await mermaid.run({ nodes: toRender });
+                if (needsLayout) {
+                  deck.layout();
+                }
+              } catch(e) {
+                console.warn('Mermaid render warning:', e);
+              }
+            }
           }
 
-          // 初始化 ECharts
-          if (typeof echarts !== 'undefined') {
-            document.querySelectorAll('pre code.language-echarts, pre code.echarts').forEach(function(block, index) {
-              try {
-                var code = block.textContent.trim();
-                var option = JSON.parse(code);
+          // Initial render with delay to ensure Reveal.js is fully initialized
+          setTimeout(renderVisibleMermaid, 200);
 
-                // 创建 ECharts 容器
-                var container = document.createElement('div');
-                container.className = 'echarts-container';
-                container.id = 'echarts-slide-' + index;
-                container.style.height = '400px';
-                container.style.width = '100%';
+          // Render on slide change
+          deck.on('slidechanged', () => {
+            setTimeout(renderVisibleMermaid, 50);
+          });
+        }
 
-                // 替换代码块
-                var pre = block.parentElement;
+        // Initialize ECharts
+        if (typeof (window as any).echarts !== 'undefined') {
+          const echarts = (window as any).echarts;
+
+          document.querySelectorAll('pre code.language-echarts, pre code.echarts').forEach((block, index) => {
+            try {
+              const code = (block.textContent || '').trim();
+              const option = JSON.parse(code);
+
+              // Create ECharts container
+              const container = document.createElement('div');
+              container.className = 'echarts-container';
+              container.id = 'echarts-slide-' + index;
+              container.style.height = '400px';
+              container.style.width = '100%';
+
+              // Replace code block
+              const pre = block.parentElement;
+              if (pre && pre.parentElement) {
                 pre.parentElement.insertBefore(container, pre);
                 pre.style.display = 'none';
-
-                echartsInstances.push({
-                  container: container,
-                  option: option,
-                  chart: null,
-                  initialized: false
-                });
-              } catch (e) {
-                console.error('ECharts parsing error:', e);
               }
-            });
 
-            // 渲染当前可见幻灯片中的 ECharts
-            function renderVisibleEcharts() {
-              echartsInstances.forEach(function(item) {
-                var section = item.container.closest('section');
-                var isVisible = section && (section.classList.contains('present') || section.closest('.present'));
-
-                if (isVisible) {
-                  if (!item.initialized) {
-                    item.chart = echarts.init(item.container);
-                    item.chart.setOption(item.option);
-                    item.initialized = true;
-                  } else if (item.chart) {
-                    item.chart.resize();
-                  }
-                }
+              echartsInstances.push({
+                container: container,
+                option: option,
+                chart: null,
+                initialized: false
               });
+            } catch (e) {
+              console.error('ECharts parsing error:', e);
             }
+          });
 
-            // 初始渲染
-            setTimeout(renderVisibleEcharts, 100);
+          // Render visible ECharts
+          function renderVisibleEcharts() {
+            echartsInstances.forEach((item) => {
+              const section = item.container.closest('section');
+              const isVisible = section && (section.classList.contains('present') || section.closest('.present'));
 
-            // 幻灯片切换时渲染/调整大小
-            Reveal.on('slidechanged', function() {
-              setTimeout(renderVisibleEcharts, 50);
-            });
-
-            // 监听窗口大小变化
-            window.addEventListener('resize', function() {
-              echartsInstances.forEach(function(item) {
-                if (item.chart) {
+              if (isVisible) {
+                if (!item.initialized) {
+                  item.chart = echarts.init(item.container);
+                  item.chart.setOption(item.option);
+                  item.initialized = true;
+                } else if (item.chart) {
                   item.chart.resize();
                 }
-              });
+              }
             });
           }
 
-        });
+          // Initial render
+          setTimeout(renderVisibleEcharts, 100);
+
+          // Render/resize on slide change
+          deck.on('slidechanged', () => {
+            setTimeout(renderVisibleEcharts, 50);
+          });
+
+          // Handle window resize
+          window.addEventListener('resize', () => {
+            echartsInstances.forEach((item) => {
+              if (item.chart) {
+                item.chart.resize();
+              }
+            });
+          });
+        }
       });
     </script>
   </body>

@@ -436,7 +436,8 @@ html body.sidebar-collapsed div[data-sidebar-toggle] {
 }
 
 html body:not(.sidebar-collapsed) div[data-sidebar-toggle] {
-  left: 16.25rem !important; /* 侧边栏显示时按钮在侧边栏右侧 (w-64 + 0.25rem) */
+  /* 使用 CSS 变量让按钮始终贴在侧边栏右边缘 */
+  left: calc(var(--sidebar-width, 256px) + 0.25rem) !important;
 }
 
 /* 平滑过渡动画 */

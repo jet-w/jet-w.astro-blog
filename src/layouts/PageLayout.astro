@@ -146,9 +146,18 @@ const ui = localeConfig.ui;
 
     if (!sidebar || !resizer) return;
 
+    // Helper to set sidebar width on both sidebar and document root (for toggle button positioning)
+    const setSidebarWidth = (width: string) => {
+      sidebar.style.setProperty('--sidebar-width', width);
+      document.documentElement.style.setProperty('--sidebar-width', width);
+    };
+
     const savedWidth = localStorage.getItem('sidebar-width');
     if (savedWidth) {
-      sidebar.style.setProperty('--sidebar-width', savedWidth);
+      setSidebarWidth(savedWidth);
+    } else {
+      // Set default width on document root for toggle button
+      document.documentElement.style.setProperty('--sidebar-width', '256px');
     }
 
     let isResizing = false;
@@ -175,7 +184,7 @@ const ui = localeConfig.ui;
       const diff = e.clientX - startX;
       const newWidth = Math.min(Math.max(startWidth + diff, 200), 500);
 
-      sidebar.style.setProperty('--sidebar-width', `${newWidth}px`);
+      setSidebarWidth(`${newWidth}px`);
     };
 
     const stopResize = () => {

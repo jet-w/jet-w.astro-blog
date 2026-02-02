@@ -1,11 +1,15 @@
 import { visit } from 'unist-util-visit';
 
+// Placeholder used by remark-protect-code plugin
+const COLON_PLACEHOLDER = '___TRIPLE_COLON___';
+
 export function remarkMermaid() {
   return (tree) => {
     visit(tree, 'code', (node, index, parent) => {
       const cleanLang = node.lang ? node.lang.trim().toLowerCase() : '';
       if (cleanLang === 'mermaid') {
-        const mermaidCode = node.value.trim();
+        // Restore ::: that was replaced by remark-protect-code before Base64 encoding
+        const mermaidCode = node.value.trim().replace(new RegExp(COLON_PLACEHOLDER, 'g'), ':::');
         const id = `mermaid-${Math.random().toString(36).slice(2, 11)}`;
 
         const htmlContent = `<div class="mermaid-container" data-mermaid-source="${escapeBase64(mermaidCode)}" data-id="${id}">
