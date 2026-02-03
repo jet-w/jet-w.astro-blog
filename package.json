@@ -36,14 +36,7 @@
   },
   "files": [
     "dist",
-    "src/plugins",
-    "src/styles",
-    "src/components",
-    "src/layouts",
-    "src/pages",
-    "src/types",
-    "src/utils",
-    "src/config",
+    "src/",
     "templates",
     "README.md"
   ],
