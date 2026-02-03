@@ -6,14 +6,24 @@ A modern, feature-rich Astro blog theme with Vue and Tailwind CSS support. Provi
 
 ## Features
 
+![Home Page](./assets/imgs/home.png)
 - **Multi-Language Support (i18n)** - Built-in internationalization with configurable locales
 - **Blog System** - Posts, tags, categories, archives, and pagination
 - **Search** - Full-text search powered by Fuse.js
+![Home Page](./assets/imgs/header.png)
 - **RSS Feed** - Automatic RSS feed generation
 - **Dark Mode** - Theme switching support
 - **Rich Markdown** - Code highlighting, math equations (KaTeX), Mermaid diagrams, custom containers
 - **Interactive Components** - Slides, ECharts, video embeds (YouTube, Bilibili)
 - **Responsive Design** - Mobile-friendly layouts with Tailwind CSS
+- **Quick Navigation** - Multiple filter for posts
+![Quick Navigation](./assets/imgs/quick_navigation.png)
+- **Recent Posts View** - List the recent posts
+![Recent Posts](./assets/imgs/recent_posts.png)
+- **Different posts views** - Multiple post views
+![Posts Card View](./assets/imgs/all_posts_card.png)
+![Posts Tree View](./assets/imgs/all_posts_list.png)
+
 
 ## Installation
 
