@@ -1,5 +1,5 @@
 ---
-import { siteConfig, footerConfig } from '@jet-w/astro-blog/config';
+import { siteConfig, footerConfig, socialLinks } from '@jet-w/astro-blog/config';
 import { defaultIcons } from '../../config/social';
 import type { I18nConfig } from '../../config/i18n';
 import { defaultI18nConfig } from '../../config/i18n';
@@ -30,6 +30,9 @@ const currentYear = new Date().getFullYear();
 function getIcon(link: { type: string; icon?: string }): string {
   return link.icon || defaultIcons[link.type] || '';
 }
+
+// Helper to check if icon type is stroke-based (like email)
+const isStrokeIcon = (type: string) => type === 'email';
 
 // Get locale prefix for RSS link (already includes base)
 const localePrefix = getLocalePrefix(currentLocale, i18nConfig, base);
@@ -88,19 +91,29 @@ const copyright = (localeFooterConfig.copyright || footerConfig.copyright)
           {localeFooterConfig.contactTitle || footerConfig.contactTitle || ui.contact}
         </h4>
         <div class="flex space-x-4">
-          {(localeFooterConfig.socialLinks || footerConfig.socialLinks).map((link) => (
-            <a
-              href={link.url}
-              target={link.type === 'email' ? undefined : '_blank'}
-              rel={link.type === 'email' ? undefined : 'noopener noreferrer'}
-              class="text-slate-600 dark:text-slate-400 hover:text-primary-500 transition-colors"
-              aria-label={link.label || link.type}
-            >
-              <svg class="w-5 h-5" fill="currentColor" viewBox="0 0 24 24">
-                <path d={getIcon(link)} />
-              </svg>
-            </a>
-          ))}
+          {(localeFooterConfig.socialLinks?.length ? localeFooterConfig.socialLinks : footerConfig.socialLinks?.length ? footerConfig.socialLinks : socialLinks || []).map((link) => {
+            const iconPath = getIcon(link);
+            const isStroke = isStrokeIcon(link.type);
+            return (
+              <a
+                href={link.url}
+                target={link.type === 'email' ? undefined : '_blank'}
+                rel={link.type === 'email' ? undefined : 'noopener noreferrer'}
+                class="text-slate-600 dark:text-slate-400 hover:text-primary-500 transition-colors"
+                aria-label={link.label || link.type}
+              >
+                {isStroke ? (
+                  <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d={iconPath} />
+                  </svg>
+                ) : (
+                  <svg class="w-5 h-5" fill="currentColor" viewBox="0 0 24 24">
+                    <path d={iconPath} />
+                  </svg>
+                )}
+              </a>
+            );
+          })}
 
           {(localeFooterConfig.showRss ?? footerConfig.showRss) && (
             <a

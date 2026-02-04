@@ -408,27 +408,32 @@
 
 /* 回到顶部按钮 */
 .back-to-top {
-  @apply fixed bottom-5 left-1/2 -translate-x-1/2 bg-primary-500 hover:bg-primary-600 text-white h-8 rounded-full flex items-center justify-center shadow transition-all duration-300 opacity-0 invisible;
-  width: 9px;
+  position: fixed !important;
+  bottom: 1.5rem !important;
+  right: 1.5rem !important;
+  width: 2.5rem !important;
+  height: 2.5rem !important;
+  flex-shrink: 0 !important;
+  @apply bg-primary-500 hover:bg-primary-600 text-white rounded-full flex items-center justify-center shadow-lg hover:shadow-xl transition-all duration-300 opacity-0 invisible;
 }
 
 .back-to-top svg {
-  @apply w-2 h-2;
+  @apply w-5 h-5;
 }
 
 .back-to-top.show {
-  @apply opacity-100 visible;
+  opacity: 1 !important;
+  visibility: visible !important;
 }
 
 /* 移动端适配 */
 @media (max-width: 640px) {
   .back-to-top {
-    @apply bottom-4 h-7;
-    width: 8px;
+    @apply bottom-4 right-4 w-9 h-9;
   }
 
   .back-to-top svg {
-    @apply w-1.5 h-1.5;
+    @apply w-4 h-4;
   }
 }
 
