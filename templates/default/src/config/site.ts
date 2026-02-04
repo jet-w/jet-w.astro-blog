@@ -14,7 +14,7 @@ export const siteConfig: SiteConfig = {
   description: '',
   author: '',
   email: 'email@example.com',
-  avatar: '/images/avatar.png',
+  avatar: '/images/avatar.webp',
   social: {
     github: 'https://github.com/username',
     twitter: '',
