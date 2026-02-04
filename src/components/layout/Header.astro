@@ -132,6 +132,12 @@ const localesForSwitcher = i18nConfig.locales.map(l => ({
             client:load
             navigation={menu}
             base={base}
+            locales={localesForSwitcher}
+            currentLocale={currentLocale}
+            currentPath={pathWithoutLocale}
+            defaultLocale={i18nConfig.defaultLocale}
+            prefixDefaultLocale={i18nConfig.routing.prefixDefaultLocale}
+            showLanguageSwitcher={showLanguageSwitcher}
           />
         </div>
       </div>

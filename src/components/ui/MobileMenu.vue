@@ -85,6 +85,27 @@
 
           <!-- 快捷功能 -->
           <div class="space-y-4">
+            <!-- 语言切换 -->
+            <div v-if="showLanguageSwitcher" class="space-y-2">
+              <span class="text-sm font-medium text-slate-700 dark:text-slate-300">语言 / Language</span>
+              <div class="flex flex-wrap gap-2">
+                <a
+                  v-for="locale in locales"
+                  :key="locale.code"
+                  :href="getLocalizedUrl(locale.code)"
+                  @click="isOpen = false"
+                  class="px-3 py-1.5 text-sm rounded-lg transition-colors"
+                  :class="[
+                    locale.code === currentLocale
+                      ? 'bg-primary-100 dark:bg-primary-900/30 text-primary-700 dark:text-primary-300'
+                      : 'bg-slate-100 dark:bg-slate-700 text-slate-700 dark:text-slate-300 hover:bg-slate-200 dark:hover:bg-slate-600'
+                  ]"
+                >
+                  {{ locale.name }}
+                </a>
+              </div>
+            </div>
+
             <div class="flex items-center justify-between">
               <span class="text-sm font-medium text-slate-700 dark:text-slate-300">深色模式</span>
               <ThemeToggle />
@@ -103,14 +124,37 @@ import type { NavigationItem } from '@jet-w/astro-blog/types'
 import SearchBox from './SearchBox.vue'
 import ThemeToggle from './ThemeToggle.vue'
 
+interface LocaleInfo {
+  code: string;
+  name: string;
+}
+
 interface Props {
   navigation: NavigationItem[]
   /** Base URL for the site (e.g., '/jet-w.astro-blog') */
   base?: string
+  /** Available locales for language switching */
+  locales?: LocaleInfo[]
+  /** Current locale code */
+  currentLocale?: string
+  /** Current page path (without locale prefix and without base) */
+  currentPath?: string
+  /** Default locale code */
+  defaultLocale?: string
+  /** Whether to prefix the default locale in URLs */
+  prefixDefaultLocale?: boolean
+  /** Whether to show language switcher */
+  showLanguageSwitcher?: boolean
 }
 
 const props = withDefaults(defineProps<Props>(), {
   base: '/',
+  locales: () => [],
+  currentLocale: '',
+  currentPath: '/',
+  defaultLocale: 'en',
+  prefixDefaultLocale: false,
+  showLanguageSwitcher: false,
 })
 
 // Helper function to add base URL to paths
@@ -124,6 +168,30 @@ function withBase(path: string): string {
     return `${baseUrl}/`;
   }
   return `${baseUrl}${normalizedPath}`;
+}
+
+// Get localized URL for language switching
+function getLocalizedUrl(targetLocale: string): string {
+  let pagePath = props.currentPath;
+  if (!pagePath.startsWith('/')) {
+    pagePath = '/' + pagePath;
+  }
+
+  const baseUrl = props.base?.replace(/\/$/, '') || '';
+
+  let localePrefix = '';
+  if (targetLocale !== props.defaultLocale || props.prefixDefaultLocale) {
+    localePrefix = `/${targetLocale}`;
+  }
+
+  if (pagePath === '/') {
+    if (localePrefix) {
+      return baseUrl ? `${baseUrl}${localePrefix}/` : `${localePrefix}/`;
+    }
+    return baseUrl ? `${baseUrl}/` : '/';
+  }
+
+  return `${baseUrl}${localePrefix}${pagePath}`;
 }
 const isOpen = ref(false)
 const currentPath = ref('')
