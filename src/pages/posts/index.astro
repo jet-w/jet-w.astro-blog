@@ -130,7 +130,7 @@ const buildTree = () => {
 
       if (existing) {
         if (isLast) {
-          existing.slug = post.id;
+          existing.slug = post.id.toLowerCase();
           existing.title = post.data.title;
           existing.description = post.data.description;
           existing.pubDate = post.data.pubDate;
@@ -141,7 +141,7 @@ const buildTree = () => {
         const folderPath = pathParts.slice(0, index + 1).join('/');
         const newNode: TreeNode = {
           name: part,
-          slug: isLast ? post.id : undefined,
+          slug: isLast ? post.id.toLowerCase() : undefined,
           title: isLast ? post.data.title : folderTitles[folderPath],
           description: isLast ? post.data.description : undefined,
           pubDate: isLast ? post.data.pubDate : undefined,
