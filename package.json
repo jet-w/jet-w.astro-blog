@@ -1,6 +1,6 @@
 {
   "name": "@jet-w/astro-blog",
-  "version": "0.2.18",
+  "version": "0.2.19",
   "description": "A modern Astro blog theme with Vue and Tailwind CSS support",
   "type": "module",
   "exports": {
