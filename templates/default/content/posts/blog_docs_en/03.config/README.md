@@ -37,6 +37,7 @@ src/config/
 | [Site Settings](./01-site) | Title, description, author info |
 | [Sidebar](./02-sidebar) | Navigation and document trees |
 | [Multi-language](./03-i18n) | Add multiple language support |
+| [Custom Assets](./04-assets) | Load custom CSS/JS files |
 
 ## Quick Overview
 

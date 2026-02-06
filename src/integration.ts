@@ -13,6 +13,8 @@ import type { I18nConfig } from './config/i18n';
 import { defaultI18nConfig } from './config/i18n';
 import type { SocialLink } from './config/social';
 import { defaultSocialLinks, defaultIcons } from './config/social';
+import type { CustomAssetsConfig } from './types';
+import { defaultCustomAssetsConfig } from './config/assets';
 
 // Virtual module ID for i18n config
 const VIRTUAL_I18N_MODULE_ID = 'virtual:astro-blog-i18n';
@@ -21,6 +23,10 @@ const RESOLVED_VIRTUAL_I18N_MODULE_ID = '\0' + VIRTUAL_I18N_MODULE_ID;
 // Virtual module ID for social config
 const VIRTUAL_SOCIAL_MODULE_ID = 'virtual:astro-blog-social';
 const RESOLVED_VIRTUAL_SOCIAL_MODULE_ID = '\0' + VIRTUAL_SOCIAL_MODULE_ID;
+
+// Virtual module ID for custom assets config
+const VIRTUAL_ASSETS_MODULE_ID = 'virtual:astro-blog-assets';
+const RESOLVED_VIRTUAL_ASSETS_MODULE_ID = '\0' + VIRTUAL_ASSETS_MODULE_ID;
 
 export interface AstroBlogIntegrationOptions {
   /**
@@ -45,6 +51,11 @@ export interface AstroBlogIntegrationOptions {
    * Social links configuration
    */
   socialLinks?: SocialLink[];
+
+  /**
+   * Custom assets configuration (CSS/JS files to load)
+   */
+  customAssets?: CustomAssetsConfig;
 }
 
 const defaultOptions: AstroBlogIntegrationOptions = {
@@ -82,6 +93,7 @@ export function astroBlogIntegration(
 
   const i18nConfig = options.i18n || defaultI18nConfig;
   const socialLinksConfig = options.socialLinks || defaultSocialLinks;
+  const customAssetsConfig = options.customAssets || defaultCustomAssetsConfig;
 
   // Get the directory where the integration is located
   const currentDir = path.dirname(fileURLToPath(import.meta.url));
@@ -98,6 +110,9 @@ export function astroBlogIntegration(
       if (id === VIRTUAL_SOCIAL_MODULE_ID) {
         return RESOLVED_VIRTUAL_SOCIAL_MODULE_ID;
       }
+      if (id === VIRTUAL_ASSETS_MODULE_ID) {
+        return RESOLVED_VIRTUAL_ASSETS_MODULE_ID;
+      }
     },
     load(id) {
       if (id === RESOLVED_VIRTUAL_I18N_MODULE_ID) {
@@ -106,6 +121,9 @@ export function astroBlogIntegration(
       if (id === RESOLVED_VIRTUAL_SOCIAL_MODULE_ID) {
         return `export const socialLinks = ${JSON.stringify(socialLinksConfig)};
 export const defaultIcons = ${JSON.stringify(defaultIcons)};`;
+      }
+      if (id === RESOLVED_VIRTUAL_ASSETS_MODULE_ID) {
+        return `export const customAssetsConfig = ${JSON.stringify(customAssetsConfig)};`;
       }
     },
   });
@@ -234,3 +252,4 @@ export default astroBlogIntegration;
 // Re-export types for convenience
 export type { I18nConfig } from './config/i18n';
 export type { SocialLink } from './config/social';
+export type { AssetConfig, CustomAssetsConfig } from './types';

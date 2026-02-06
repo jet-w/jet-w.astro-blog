@@ -145,6 +145,86 @@ export const footer = {
 };
 ```
 
+## Layout Configuration
+
+### Content Width
+
+Set the maximum width of the content area using `layout.contentWidth`:
+
+```typescript
+// src/config/site.ts
+export const siteConfig = {
+  title: 'My Blog',
+  // ...other config
+
+  // Layout configuration
+  layout: {
+    contentWidth: 'normal',  // Preset width
+  },
+};
+```
+
+### Preset Width Options
+
+| Option | Width | Description |
+|--------|-------|-------------|
+| `narrow` | 768px | Narrow layout, ideal for reading |
+| `normal` | 1024px | Standard width (default) |
+| `wide` | 1280px | Wide layout, shows more content |
+| `full` | 100% | Full width, fills container |
+
+### Custom Width
+
+Besides presets, you can set any CSS width value:
+
+```typescript
+layout: {
+  contentWidth: '900px',     // Fixed pixel width
+}
+```
+
+```typescript
+layout: {
+  contentWidth: '80vw',      // Viewport width percentage
+}
+```
+
+```typescript
+layout: {
+  contentWidth: '60rem',     // rem units
+}
+```
+
+### Usage Examples
+
+**Narrow layout** (ideal for blog posts):
+
+```typescript
+export const siteConfig = {
+  title: 'Reading Notes',
+  layout: {
+    contentWidth: 'narrow',
+  },
+};
+```
+
+**Wide layout** (ideal for documentation sites):
+
+```typescript
+export const siteConfig = {
+  title: 'Tech Docs',
+  layout: {
+    contentWidth: 'wide',
+  },
+};
+```
+
+::: tip Layout Recommendations
+- **Blog posts**: Use `narrow` or `normal` for better reading experience
+- **Technical docs**: Use `normal` or `wide` for code display
+- **Portfolio**: Use `wide` or `full` for visual content
+:::
+
 ## Astro Configuration
 
 Main configuration in `astro.config.mjs`:

@@ -18,6 +18,9 @@ import {
 import { defaultI18nConfig } from '../config/i18n';
 // Import i18n config from virtual module (injected by integration)
 import { i18nConfig as virtualI18nConfig } from 'virtual:astro-blog-i18n';
+// Import custom assets config from virtual module (injected by integration)
+import { customAssetsConfig as virtualCustomAssetsConfig } from 'virtual:astro-blog-assets';
+import type { AssetConfig, CustomAssetsConfig } from '../types';
 
 export interface Props {
   title?: string;
@@ -90,6 +93,14 @@ const contentWidthMap: Record<string, string> = {
   'full': '100%',
 };
 const contentMaxWidth = contentWidthMap[contentWidthConfig] || contentWidthConfig;
+
+// Get custom assets from virtual module
+const customAssets = virtualCustomAssetsConfig?.assets || [];
+
+// Separate assets by position
+const headCssAssets = customAssets.filter((asset: AssetConfig) => asset.type === 'css');
+const headJsAssets = customAssets.filter((asset: AssetConfig) => asset.type === 'js' && asset.position !== 'body');
+const bodyJsAssets = customAssets.filter((asset: AssetConfig) => asset.type === 'js' && asset.position === 'body');
 ---
 
 <!DOCTYPE html>
@@ -153,6 +164,28 @@ const contentMaxWidth = contentWidthMap[contentWidthConfig] || contentWidthConfi
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.css" integrity="sha384-n8MVd4RsNIU0tAv4ct0nTaAbDJwPJzDEaqSD1odI+WdtXRGWt2kTvGFasHpSy3SV" crossorigin="anonymous" />
     <!-- Ionicons -->
     <script type="module" src="https://unpkg.com/ionicons@7.1.0/dist/ionicons/ionicons.esm.js"></script>
+
+    <!-- Custom CSS Assets -->
+    {headCssAssets.map((asset: AssetConfig) => (
+      <link
+        rel="stylesheet"
+        href={asset.src}
+        crossorigin={asset.crossorigin}
+        integrity={asset.integrity}
+      />
+    ))}
+
+    <!-- Custom JS Assets (head) -->
+    {headJsAssets.map((asset: AssetConfig) => (
+      <script
+        src={asset.src}
+        async={asset.async}
+        defer={asset.defer}
+        type={asset.module ? 'module' : undefined}
+        crossorigin={asset.crossorigin}
+        integrity={asset.integrity}
+      />
+    ))}
 
     <script is:inline>
       const theme = (() => {
@@ -420,6 +453,18 @@ const contentMaxWidth = contentWidthMap[contentWidthConfig] || contentWidthConfi
 
       observer.observe(document.body, { childList: true, subtree: true });
     </script>
+
+    <!-- Custom JS Assets (body) -->
+    {bodyJsAssets.map((asset: AssetConfig) => (
+      <script
+        src={asset.src}
+        async={asset.async}
+        defer={asset.defer}
+        type={asset.module ? 'module' : undefined}
+        crossorigin={asset.crossorigin}
+        integrity={asset.integrity}
+      />
+    ))}
 
   </body>
 </html>

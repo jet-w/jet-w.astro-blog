@@ -7,6 +7,7 @@ export { menu, defaultMenu, defineMenu } from './menu';
 export { sidebarConfig, defaultSidebarConfig, defineSidebarConfig } from './sidebar';
 export { defaultIcons, socialLinks, defaultSocialLinks, defineSocialLinks } from './social';
 export { footerConfig, defaultFooterConfig, defineFooterConfig } from './footer';
+export { customAssetsConfig, defaultCustomAssetsConfig, defineCustomAssets } from './assets';
 
 // i18n exports
 export {

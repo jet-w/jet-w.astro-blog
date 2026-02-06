@@ -145,6 +145,86 @@ export const footer = {
 };
 ```
 
+## 布局配置
+
+### 内容区宽度
+
+通过 `layout.contentWidth` 设置内容区的最大宽度：
+
+```typescript
+// src/config/site.ts
+export const siteConfig = {
+  title: '我的博客',
+  // ...其他配置
+
+  // 布局配置
+  layout: {
+    contentWidth: 'normal',  // 预设宽度
+  },
+};
+```
+
+### 预设宽度选项
+
+| 选项 | 宽度 | 说明 |
+|------|------|------|
+| `narrow` | 768px | 窄版，适合纯文字阅读 |
+| `normal` | 1024px | 标准宽度（默认） |
+| `wide` | 1280px | 宽版，适合展示更多内容 |
+| `full` | 100% | 全宽，占满容器 |
+
+### 自定义宽度
+
+除了预设值，你也可以设置任意 CSS 宽度值：
+
+```typescript
+layout: {
+  contentWidth: '900px',     // 固定像素宽度
+}
+```
+
+```typescript
+layout: {
+  contentWidth: '80vw',      // 视口宽度百分比
+}
+```
+
+```typescript
+layout: {
+  contentWidth: '60rem',     // rem 单位
+}
+```
+
+### 使用示例
+
+**窄版布局**（适合博客文章）：
+
+```typescript
+export const siteConfig = {
+  title: '阅读笔记',
+  layout: {
+    contentWidth: 'narrow',
+  },
+};
+```
+
+**宽版布局**（适合文档站点）：
+
+```typescript
+export const siteConfig = {
+  title: '技术文档',
+  layout: {
+    contentWidth: 'wide',
+  },
+};
+```
+
+::: tip 布局建议
+- **博客文章**：使用 `narrow` 或 `normal`，提升阅读体验
+- **技术文档**：使用 `normal` 或 `wide`，便于展示代码
+- **作品集**：使用 `wide` 或 `full`，展示更多视觉内容
+:::
+
 ## Astro 配置
 
 `astro.config.mjs` 中的主要配置：

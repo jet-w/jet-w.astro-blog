@@ -12,3 +12,8 @@ declare module 'virtual:astro-blog-social' {
   export const socialLinks: SocialLink[];
   export const defaultIcons: Record<string, string>;
 }
+
+declare module 'virtual:astro-blog-assets' {
+  import type { CustomAssetsConfig } from './types';
+  export const customAssetsConfig: CustomAssetsConfig;
+}
