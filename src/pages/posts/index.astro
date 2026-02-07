@@ -505,12 +505,14 @@ const formatDateLocal = (date?: Date) => {
   .view-toggle-btn:not(.active):hover {
     @apply text-slate-700 dark:text-slate-200;
   }
+</style>
 
-  .folder-toggle.expanded .folder-chevron {
+<style is:global>
+  .post-tree .folder-toggle.expanded > .folder-chevron {
     transform: rotate(90deg);
   }
 
-  .folder-children.show {
+  .post-tree .folder-children.show {
     display: block;
   }
 </style>
